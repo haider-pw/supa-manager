@@ -1,16 +1,426 @@
 # SupaManager
-A project by Harry Bairstow;<br/>
-Manage self-hosted Supabase instances using the Supabase studio.
 
-<hr />
+A project by Harry Bairstow
+Manage self-hosted Supabase instances using the Supabase Studio.
+
+---
 
 > [!WARNING]
-> The project is in active development and as such there are no docs for it, the best thing todo is wait for the project to become more stable. I am in the Supabase discord, however, the best way to reach me is via [my discord server](https://discord.gg/4k5HRe6YEp) or [twitter](https://twitter.com/TheHarryET)
+> **Active Development Status**
+> This project is in active development. Currently, the management API and Studio UI are functional, but **project provisioning is not yet implemented**. Projects can be created in the database but will not spin up actual Supabase infrastructure.
 
-This project is only an API that has to be used in conjunction with the Supabase Studio or another UI. It is a fully functioning API which is based on what Supabase us in production and have as a mock in the Studio project. Please read the guides - when they are available - for information on how to start Supabase's Studio using this as the API.
+This project provides a management API to work with Supabase Studio, allowing you to manage multiple Supabase projects through a web interface.
 
 > [!NOTE]
-> We provide a way to patch a version of the Supabase Studio to use this API. Please refer to the `studio` folder for more information.
+> We provide a patched version of Supabase Studio (v1.24.04) that works with this API. The build script is located in the `studio/` folder.
+
+---
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Detailed Setup](#detailed-setup)
+- [Accessing the Application](#accessing-the-application)
+- [Project Structure](#project-structure)
+- [Configuration](#configuration)
+- [Current Status](#current-status)
+- [Troubleshooting](#troubleshooting)
+- [Documentation](#documentation)
+
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed on your Ubuntu/Linux machine:
+
+- **Docker** (version 20.10 or higher)
+- **Docker Compose** (v2 or higher - comes with Docker Desktop)
+- **Git** (for cloning the repository)
+
+### Installing Docker
+
+If you don't have Docker installed:
+
+```bash
+# Update package list
+sudo apt-get update
+
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Add your user to the docker group (to run without sudo)
+sudo usermod -aG docker $USER
+
+# Log out and back in for group changes to take effect
+```
+
+Verify Docker is installed:
+```bash
+docker --version
+docker compose version
+```
+
+---
+
+## Quick Start
+
+Get up and running in 5 minutes:
+
+```bash
+# 1. Clone the repository
+git clone <repository-url>
+cd supabase-manager
+
+# 2. Build the Studio image (takes 5-10 minutes first time)
+cd studio
+./build.sh v1.24.04 supa-manager/studio:v1.24.04 .env
+cd ..
+
+# 3. Start all services
+docker compose up -d
+
+# 4. Wait for services to be healthy (30-60 seconds)
+docker compose ps
+
+# 5. Open Studio in your browser
+# http://localhost:3000
+```
+
+**Default credentials:**
+- Email: `haideritx@gmail.com`
+- Password: `NoAdmin@456`
+
+---
+
+## Detailed Setup
+
+### Step 1: Clone the Repository
+
+```bash
+git clone <repository-url>
+cd supabase-manager
+```
+
+### Step 2: Build the Patched Studio Image
+
+The Studio UI requires a patched version to work with the management API.
+
+```bash
+# Navigate to the studio directory
+cd studio
+
+# Build the patched Studio image (this will take 5-10 minutes)
+./build.sh v1.24.04 supa-manager/studio:v1.24.04 .env
+
+# Return to the root directory
+cd ..
+```
+
+**What this does:**
+- Downloads Supabase Studio source code (v1.24.04)
+- Applies custom patches to work with the supa-manager API
+- Builds a Docker image tagged as `supa-manager/studio:v1.24.04`
+
+### Step 3: Review Configuration (Optional)
+
+The docker-compose.yml is already configured with sensible defaults. You can optionally review the configuration files:
+
+**Main configuration files:**
+- `docker-compose.yml` - Service definitions
+- `supa-manager/.env` - Backend API configuration
+- `studio/.env` - Studio frontend configuration
+
+For production deployments, you should change:
+- `JWT_SECRET` in `supa-manager/.env`
+- `ENCRYPTION_SECRET` in `supa-manager/.env`
+- Database passwords
+
+### Step 4: Start Services
+
+Start all services using Docker Compose:
+
+```bash
+# Start in detached mode (background)
+docker compose up -d
+
+# Or start with logs visible (useful for debugging)
+docker compose up
+```
+
+This will start three services:
+1. **PostgreSQL Database** (port 5432) - Management database
+2. **Supa-Manager API** (port 8080) - Backend API
+3. **Studio UI** (port 3000) - Web interface
+
+### Step 5: Verify Services Are Running
+
+Check that all services are healthy:
+
+```bash
+docker compose ps
+```
+
+You should see:
+```
+NAME                            STATUS
+supabase-manager-database-1     Up (healthy)
+supabase-manager-supa-manager-1 Up
+supabase-manager-studio-1       Up
+```
+
+Check logs if any service has issues:
+```bash
+# View all logs
+docker compose logs
+
+# View logs for specific service
+docker compose logs supa-manager
+docker compose logs studio
+docker compose logs database
+```
+
+---
+
+## Accessing the Application
+
+### Studio Web Interface
+
+Open your browser and navigate to:
+```
+http://localhost:3000
+```
+
+**Login with the default account:**
+- **Email:** `haideritx@gmail.com`
+- **Password:** `NoAdmin@456`
+
+> **Note:** This default account was created during testing. For production, you should create your own account or change this password.
+
+### API Endpoints
+
+The management API is available at:
+```
+http://localhost:8080
+```
+
+**Example API calls:**
+
+```bash
+# Health check
+curl http://localhost:8080/health
+
+# Get API version (requires authentication)
+curl http://localhost:8080/platform/profile \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Database Access
+
+PostgreSQL is exposed on the default port:
+```
+Host: localhost
+Port: 5432
+Database: supabase
+Username: postgres
+Password: postgres
+```
+
+Connect using `psql`:
+```bash
+docker exec -it supabase-manager-database-1 psql -U postgres -d supabase
+```
+
+---
+
+## Project Structure
+
+```
+supabase-manager/
+├── docker-compose.yml          # Service orchestration
+├── supa-manager/               # Backend API (Go)
+│   ├── api/                    # API handlers
+│   ├── conf/                   # Configuration
+│   ├── database/               # Database queries (sqlc)
+│   ├── migrations/             # SQL migrations
+│   ├── Dockerfile              # Backend container build
+│   └── .env                    # Backend configuration
+├── studio/                     # Frontend UI (Next.js)
+│   ├── build.sh                # Studio build script
+│   ├── patch.sh                # Patch application script
+│   └── .env                    # Studio configuration
+├── version-service/            # Version tracking service
+├── dns-service/                # DNS management service
+├── helm/                       # Kubernetes deployment charts
+└── README.md                   # This file
+```
+
+---
+
+## Configuration
+
+### Environment Variables (supa-manager/.env)
+
+Key configuration options:
+
+```bash
+# Database connection
+DATABASE_URL=postgres://postgres:postgres@database:5432/supabase
+
+# Authentication
+ALLOW_SIGNUP=true
+JWT_SECRET=secret                    # Change for production!
+ENCRYPTION_SECRET=secret             # Change for production!
+
+# Project defaults
+POSTGRES_DISK_SIZE=10
+POSTGRES_DEFAULT_VERSION=14.2
+POSTGRES_DOCKER_IMAGE=supabase/postgres
+
+# Studio integration
+DOMAIN_STUDIO_URL=http://localhost:3000
+DOMAIN_BASE=supamanager.io
+
+# DNS webhook (for dynamic DNS updates)
+DOMAIN_DNS_HOOK_URL=http://localhost:8081
+DOMAIN_DNS_HOOK_KEY=mysecretkey
+```
+
+### Environment Variables (studio/.env)
+
+```bash
+# API connection
+PLATFORM_PG_META_URL=http://supa-manager:8080/pg
+NEXT_PUBLIC_API_URL=http://localhost:8080
+
+# Frontend URLs
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_GOTRUE_URL=http://localhost:8080/auth
+```
+
+---
+
+## Current Status
+
+### ✅ What's Working
+
+- User authentication (signup/login)
+- Organization creation and management
+- Project metadata creation
+- Studio UI integration
+- API endpoints for project management
+- Database migrations
+
+### ⚠️ What's Not Working (Yet)
+
+- **Dynamic Supabase project provisioning** - Projects are created in the database but no actual Supabase infrastructure is spun up
+- Project status tracking (projects remain in "UNKNOWN" status)
+- Project lifecycle management (pause/resume/delete)
+- Real JWT key generation (currently returns placeholder "a.b.c")
+
+### 🚧 Roadmap
+
+See the [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) and [SUPABASE_ARCHITECTURE.md](SUPABASE_ARCHITECTURE.md) documents for detailed information about the planned implementation.
+
+**Upcoming features:**
+- Phase 2: Design provisioning approach
+- Phase 3: Implement Docker Compose provisioning for Supabase projects
+- Phase 4: Project lifecycle management
+- Phase 5: Kubernetes support
+
+---
+
+## Troubleshooting
+
+### Services won't start
+
+**Check if ports are already in use:**
+```bash
+sudo lsof -i :3000  # Studio
+sudo lsof -i :8080  # API
+sudo lsof -i :5432  # PostgreSQL
+```
+
+**Solution:** Stop services using those ports or change ports in docker-compose.yml
+
+### Studio build fails
+
+**Error:** "Patches failed to apply"
+
+**Solution:** Ensure you're using the correct Studio version:
+```bash
+cd studio
+./build.sh v1.24.04 supa-manager/studio:v1.24.04 .env
+```
+
+### Database migration errors
+
+**Error:** "migrations table does not exist"
+
+**Solution:** Restart the supa-manager service:
+```bash
+docker compose restart supa-manager
+```
+
+### Cannot login to Studio
+
+**Check supa-manager logs:**
+```bash
+docker compose logs supa-manager
+```
+
+**Verify database is healthy:**
+```bash
+docker compose ps database
+```
+
+### "Failed to create new project: undefined"
+
+This is expected! The project creation API works, but provisioning is not yet implemented. The project is created in the database but no Supabase infrastructure is started. See [Current Status](#current-status) above.
+
+---
+
+## Managing Services
+
+### Stop services
+```bash
+docker compose down
+```
+
+### Stop and remove volumes (delete all data)
+```bash
+docker compose down -v
+```
+
+### Restart a specific service
+```bash
+docker compose restart supa-manager
+docker compose restart studio
+```
+
+### View real-time logs
+```bash
+docker compose logs -f
+```
+
+### Rebuild after code changes
+```bash
+docker compose up -d --build
+```
+
+---
+
+## Documentation
+
+For more detailed technical documentation, see:
+
+- **[CLAUDE.md](CLAUDE.md)** - Quick reference for development
+- **[PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md)** - Complete codebase analysis
+- **[SUPABASE_ARCHITECTURE.md](SUPABASE_ARCHITECTURE.md)** - Full Supabase service architecture
+- **[PHASE_1_SUMMARY.md](PHASE_1_SUMMARY.md)** - Analysis summary and next steps
+
+---
 
 ## Licence
 Copyright (C) 2024 Harry Bairstow
