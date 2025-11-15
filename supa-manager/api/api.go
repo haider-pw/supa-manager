@@ -155,6 +155,29 @@ func (a *Api) Router() *gin.Engine {
 		}
 	}
 
+	// Singular /project routes (some Studio UI calls use singular)
+	project := r.Group("/project")
+	{
+		specificProject := project.Group("/:ref")
+		{
+			specificProject.GET("/status", a.getProjectStatus)
+			specificProject.GET("/jwt-secret-update-status", a.getProjectJwtSecretUpdateStatus)
+			specificProject.GET("/api", a.getProjectApi)
+		}
+	}
+
+	// Props routes (used by Studio UI)
+	props := r.Group("/props")
+	{
+		propsProject := props.Group("/project")
+		{
+			specificProject := propsProject.Group("/:ref")
+			{
+				specificProject.GET("/jwt-secret-update-status", a.getPropsProjectJwtSecretUpdateStatus)
+			}
+		}
+	}
+
 	gotrue := r.Group("/auth")
 	{
 		gotrue.POST("/token", a.postGotrueToken)
@@ -164,7 +187,18 @@ func (a *Api) Router() *gin.Engine {
 	{
 		platform.POST("/signup", a.postPlatformSignup)
 		platform.GET("/notifications", a.getPlatformNotifications)
+		platform.GET("/notifications/summary", a.getPlatformNotificationsSummary)
 		platform.GET("/stripe/invoices/overdue", a.getPlatformOverdueInvoices)
+		platform.GET("/projects-resource-warnings", a.getPlatformProjectsResourceWarnings)
+
+		// pg-meta routes for database metadata queries
+		platformPgMeta := platform.Group("/pg-meta")
+		{
+			specificProject := platformPgMeta.Group("/:ref")
+			{
+				specificProject.POST("/query", a.postPlatformPgMetaQuery)
+			}
+		}
 
 		platformProjects := platform.Group("/projects")
 		{
@@ -174,6 +208,18 @@ func (a *Api) Router() *gin.Engine {
 			{
 				specificProject.GET(INDEX, a.getPlatformProject)
 				specificProject.GET("/settings", a.getPlatformProjectSettings)
+				specificProject.GET("/billing/addons", a.getPlatformProjectBillingAddons)
+			}
+		}
+
+		// Singular /project routes (some Studio UI calls use singular)
+		platformProject := platform.Group("/project")
+		{
+			specificProject := platformProject.Group("/:ref")
+			{
+				specificProject.GET(INDEX, a.getPlatformProject)
+				specificProject.GET("/settings", a.getPlatformProjectSettings)
+				specificProject.GET("/billing/addons", a.getPlatformProjectBillingAddons)
 			}
 		}
 
@@ -183,15 +229,36 @@ func (a *Api) Router() *gin.Engine {
 			specificOrganization := platformOrganizations.Group("/:slug")
 			{
 				specificOrganization.GET("/billing/subscription", a.getPlatformOrganizationSubscription)
+				specificOrganization.GET("/usage", a.getPlatformOrganizationUsage)
 			}
 		}
 
 		platform.GET("/integrations/:integration/connections", a.getIntegrationConnections)
+		platform.GET("/integrations/:integration/authorization", a.getPlatformIntegrationAuthorization)
+		platform.GET("/integrations/:integration/repositories", a.getPlatformIntegrationRepositories)
+	}
+
+	// Integrations routes (organization level)
+	integrations := r.Group("/integrations")
+	{
+		integrations.GET("/:id", a.getIntegrations)
 	}
 
 	configcat := r.Group("/configcat")
 	{
 		configcat.GET("/configuration-files/:key/config_v5.json", a.getConfigCatConfiguration)
+	}
+
+	v1 := r.Group("/v1")
+	{
+		v1Projects := v1.Group("/projects")
+		{
+			specificProject := v1Projects.Group("/:ref")
+			{
+				specificProject.GET("/custom-hostname", a.getProjectCustomHostname)
+				specificProject.GET("/upgrade/eligibility", a.getProjectUpgradeEligibility)
+			}
+		}
 	}
 
 	return r
