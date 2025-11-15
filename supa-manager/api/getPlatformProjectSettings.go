@@ -45,6 +45,7 @@ func (a *Api) getPlatformProjectSettings(c *gin.Context) {
 			PreviewBranchRefs:        []interface{}{},
 			IsBranchEnabled:          false,
 			IsPhysicalBackupsEnabled: false,
+			JwtSecret:                proj.JwtSecret, // Include JWT secret for reveal
 		},
 		"services": []interface{}{
 			ProjectAutoApiService{
