@@ -1,20 +1,51 @@
 version: "3"
 services:
   database:
-    image: supabase/postgres:latest
+    image: supabase/postgres:15.1.0.147
     ports:
       - "5432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: supabase
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  supa-manager:
+    build:
+      context: ./supa-manager
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@database:5432/supabase
+      ALLOW_SIGNUP: "true"
+      JWT_SECRET: secret
+      ENCRYPTION_SECRET: secret
+      SERVICE_VERSION_URL: https://supamanager.io/updates
+      POSTGRES_DISK_SIZE: 10
+      POSTGRES_DEFAULT_VERSION: 14.2
+      POSTGRES_DOCKER_IMAGE: supabase/postgres
+      DOMAIN_STUDIO_URL: http://localhost:3000
+      DOMAIN_BASE: supamanager.io
+      DOMAIN_DNS_HOOK_URL: http://localhost:8081
+      DOMAIN_DNS_HOOK_KEY: mysecretkey
+    depends_on:
+      database:
+        condition: service_healthy
+
   studio:
     image: supa-manager/studio:v1.24.04
     ports:
       - "3000:3000"
     environment:
-      PLATFORM_PG_META_URL: http://localhost:8080/pg
+      PLATFORM_PG_META_URL: http://supa-manager:8080/pg
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       NEXT_PUBLIC_GOTRUE_URL: http://localhost:8080/auth
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_API_ADMIN_URL: http://localhost:8080
+    depends_on:
+      - supa-manager
