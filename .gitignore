@@ -15,3 +15,5 @@
 # Logs
 *.log
 npm-debug.log*
+# Wiki is separate repository
+wiki/
