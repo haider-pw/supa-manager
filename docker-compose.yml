@@ -33,6 +33,12 @@ services:
       DOMAIN_BASE: supamanager.io
       DOMAIN_DNS_HOOK_URL: http://localhost:8081
       DOMAIN_DNS_HOOK_KEY: ${DOMAIN_DNS_HOOK_KEY:-change-me-in-production}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     depends_on:
       database:
         condition: service_healthy
@@ -48,4 +54,5 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_API_ADMIN_URL: http://localhost:8080
     depends_on:
-      - supa-manager
+      supa-manager:
+        condition: service_healthy
