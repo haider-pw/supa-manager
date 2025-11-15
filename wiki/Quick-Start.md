@@ -89,14 +89,14 @@ http://localhost:3000
 
 ## First Login
 
-Use the default test account:
+**Create Your Account:**
 
-```
-Email:    haideritx@gmail.com
-Password: NoAdmin@456
-```
+1. Navigate to http://localhost:3000
+2. Click "Sign Up"
+3. Enter your email and password
+4. Start managing your Supabase projects
 
-> **Note:** This account was created during development. You can create new accounts or change this password after logging in.
+> **Note:** The first account you create will have admin privileges.
 
 ---
 

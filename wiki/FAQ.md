@@ -267,8 +267,9 @@ docker exec -it supabase-manager-database-1 psql -U postgres -d supabase
 
 **Common causes:**
 1. API not running: `docker compose ps`
-2. Wrong credentials: Use `haideritx@gmail.com` / `NoAdmin@456`
+2. Wrong credentials: Ensure you're using the account you created during signup
 3. Database not initialized: `docker compose restart supa-manager`
+4. Token expired: Clear browser cookies and log in again
 
 See [Troubleshooting - Can't Login](Troubleshooting#cant-login-to-studio).
 

@@ -265,20 +265,26 @@ docker compose logs supa-manager | grep -i auth
 ```bash
 curl -X POST http://localhost:8080/platform/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"haideritx@gmail.com","password":"NoAdmin@456"}'
+  -d '{"email":"your-email@example.com","password":"your-password"}'
 ```
 
 **Solutions:**
 
-**Create account manually:**
+**Create account via UI:**
+1. Navigate to http://localhost:3000
+2. Click "Sign Up"
+3. Create your account
+4. Try logging in again
+
+**Check database connection:**
 ```bash
 docker exec -it supabase-manager-database-1 psql -U postgres -d supabase
 ```
 ```sql
--- Check if account exists
-SELECT * FROM accounts WHERE email = 'haideritx@gmail.com';
+-- Check if accounts table exists
+SELECT COUNT(*) FROM accounts;
 
--- If not, restart supa-manager to run migrations
+-- If table doesn't exist, restart supa-manager to run migrations
 ```
 
 ### Project Creation Fails

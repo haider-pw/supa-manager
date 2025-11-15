@@ -88,9 +88,7 @@ docker compose ps
 # http://localhost:3000
 ```
 
-**Default credentials:**
-- Email: `haideritx@gmail.com`
-- Password: `NoAdmin@456`
+**Note:** You'll need to sign up for an account on first access through the Studio UI.
 
 ---
 
@@ -192,11 +190,11 @@ Open your browser and navigate to:
 http://localhost:3000
 ```
 
-**Login with the default account:**
-- **Email:** `haideritx@gmail.com`
-- **Password:** `NoAdmin@456`
-
-> **Note:** This default account was created during testing. For production, you should create your own account or change this password.
+**First Time Setup:**
+1. Open the Studio UI at http://localhost:3000
+2. Click "Sign Up" to create your admin account
+3. Fill in your email and password
+4. Start managing your Supabase projects
 
 ### API Endpoints
 
