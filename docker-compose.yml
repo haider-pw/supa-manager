@@ -6,7 +6,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: supabase
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -21,10 +21,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DATABASE_URL: postgres://postgres:postgres@database:5432/supabase
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@database:5432/supabase
       ALLOW_SIGNUP: "true"
-      JWT_SECRET: secret
-      ENCRYPTION_SECRET: secret
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
+      ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:-change-me-in-production-min-32-chars}
       SERVICE_VERSION_URL: https://supamanager.io/updates
       POSTGRES_DISK_SIZE: 10
       POSTGRES_DEFAULT_VERSION: 14.2
@@ -32,7 +32,7 @@ services:
       DOMAIN_STUDIO_URL: http://localhost:3000
       DOMAIN_BASE: supamanager.io
       DOMAIN_DNS_HOOK_URL: http://localhost:8081
-      DOMAIN_DNS_HOOK_KEY: mysecretkey
+      DOMAIN_DNS_HOOK_KEY: ${DOMAIN_DNS_HOOK_KEY:-change-me-in-production}
     depends_on:
       database:
         condition: service_healthy
