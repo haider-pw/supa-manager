@@ -12,11 +12,11 @@ import (
 )
 
 func EnsureMigrationsTableExists(conn *pgxpool.Pool) error {
-	// Check if the table exists
+	// Check if the table exists in the public schema
 	query := `
 		SELECT EXISTS (
-			SELECT FROM information_schema.tables 
-			WHERE table_name = 'migrations'
+			SELECT FROM information_schema.tables
+			WHERE table_schema = 'public' AND table_name = 'migrations'
 		)
 	`
 	var exists bool
