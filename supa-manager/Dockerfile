@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app/supa-manager main.go
 # Runtime stage
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates words && \
+RUN apk --no-cache add ca-certificates words wget && \
     ln -s /usr/share/dict/american-english /usr/share/dict/words
 
 WORKDIR /root/
