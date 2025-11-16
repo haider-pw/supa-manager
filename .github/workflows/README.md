@@ -38,14 +38,14 @@ The workflow uses **GitHub Environments** with two types of configuration:
 
 These are sensitive values that are encrypted and never visible:
 
-| Secret Name | Description |
-|------------|-------------|
-| `PRODUCTION_HOST` | Production server public IP (182.191.91.226) |
-| `PRODUCTION_USER` | SSH username (haider) |
-| `PRODUCTION_PASSWORD` | SSH password |
-| `DATABASE_PASSWORD` | PostgreSQL database password |
-| `JWT_SECRET` | Secret for JWT token signing |
-| `ENCRYPTION_SECRET` | Secret for data encryption |
+| Secret Name | Example Value | Description |
+|------------|---------------|-------------|
+| `PRODUCTION_HOST` | `<your-server-ip>` | Production server public IP |
+| `PRODUCTION_USER` | `<your-username>` | SSH username |
+| `PRODUCTION_PASSWORD` | `<your-password>` | SSH password (consider using SSH keys) |
+| `DATABASE_PASSWORD` | `<generated-secret>` | PostgreSQL database password |
+| `JWT_SECRET` | `<generated-secret>` | Secret for JWT token signing (min 64 chars) |
+| `ENCRYPTION_SECRET` | `<generated-secret>` | Secret for data encryption (min 64 chars) |
 
 ### Variables (Plain Text) - 20 items
 
@@ -53,8 +53,8 @@ These are configuration values that are visible (not sensitive):
 
 | Variable Name | Example Value | Description |
 |--------------|---------------|-------------|
-| `DOMAIN_BASE` | `supamanage.buzz` | Base domain |
-| `DOMAIN_STUDIO_URL` | `https://studio.supamanage.buzz` | Studio URL |
+| `DOMAIN_BASE` | `yourdomain.com` | Base domain |
+| `DOMAIN_STUDIO_URL` | `https://studio.yourdomain.com` | Studio URL |
 | `SERVICE_VERSION_URL` | `https://placeholder.local/updates` | Version service URL |
 | `POSTGRES_DISK_SIZE` | `10` | Default disk size (GB) |
 | `POSTGRES_DEFAULT_VERSION` | `15.1` | PostgreSQL version |
@@ -64,13 +64,13 @@ These are configuration values that are visible (not sensitive):
 | `PROVISIONING_PROJECTS_DIR` | `/root/projects` | Projects directory |
 | `PROVISIONING_BASE_POSTGRES_PORT` | `5433` | Base PostgreSQL port |
 | `PROVISIONING_BASE_KONG_HTTP_PORT` | `54321` | Base Kong port |
-| `PLATFORM_PG_META_URL` | `https://www.supamanage.buzz/pg` | pg-meta URL |
-| `NEXT_PUBLIC_SITE_URL` | `https://studio.supamanage.buzz` | Studio site URL |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://www.supamanage.buzz` | Main API URL |
+| `PLATFORM_PG_META_URL` | `https://www.yourdomain.com/pg` | pg-meta URL |
+| `NEXT_PUBLIC_SITE_URL` | `https://studio.yourdomain.com` | Studio site URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://www.yourdomain.com` | Main API URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `aaa.bbb.ccc` | Anon key (placeholder) |
-| `NEXT_PUBLIC_GOTRUE_URL` | `https://www.supamanage.buzz/auth` | Auth URL |
-| `NEXT_PUBLIC_API_URL` | `https://www.supamanage.buzz` | API URL |
-| `NEXT_PUBLIC_API_ADMIN_URL` | `https://www.supamanage.buzz` | Admin API URL |
+| `NEXT_PUBLIC_GOTRUE_URL` | `https://www.yourdomain.com/auth` | Auth URL |
+| `NEXT_PUBLIC_API_URL` | `https://www.yourdomain.com` | API URL |
+| `NEXT_PUBLIC_API_ADMIN_URL` | `https://www.yourdomain.com` | Admin API URL |
 | `NEXT_PUBLIC_HCAPTCHA_SITE_KEY` | `10000000-ffff-ffff-ffff-000000000001` | hCaptcha key |
 | `ALLOW_SIGNUP` | `true` | Allow user registration |
 
@@ -79,36 +79,38 @@ These are configuration values that are visible (not sensitive):
 ### Step 1: Create Production Environment
 
 1. Go to repository **Settings** → **Environments**
-2. Click **\"New environment\"**
+2. Click **"New environment"**
 3. Name it: `production`
-4. Click **\"Configure environment\"**
+4. Click **"Configure environment"**
 
 ### Step 2: Add Secrets
 
 In the production environment page:
-1. Scroll to **\"Environment secrets\"**
-2. Click **\"Add secret\"** for each of the 6 secrets listed above
+1. Scroll to **"Environment secrets"**
+2. Click **"Add secret"** for each of the 6 secrets listed above
 3. Copy values from your current `.env` files on the server
 
 ### Step 3: Add Variables
 
 In the production environment page:
-1. Scroll to **\"Environment variables\"**
-2. Click **\"Add variable\"** for each of the 20 variables listed above
-3. Use the values from the table above
+1. Scroll to **"Environment variables"**
+2. Click **"Add variable"** for each of the 20 variables listed above
+3. Use your actual domain and configuration values
 
 ### Get Current Values from Server
 
 SSH into your server to get current production values:
 
 ```bash
-ssh haider@182.191.91.226
+ssh <your-user>@<your-server-ip>
 
 # Get secrets
 grep DATABASE_PASSWORD /opt/supamanage/.env
 grep JWT_SECRET /opt/supamanage/supa-manager/.env
 grep ENCRYPTION_SECRET /opt/supamanage/supa-manager/.env
 ```
+
+**Security Note:** Never commit these values to git or share them publicly!
 
 ## How It Works
 
@@ -143,10 +145,10 @@ If you only change GitHub Secrets/Variables (no code changes):
 Trigger a deployment manually:
 
 1. Go to **Actions** tab
-2. Select **\"Deploy to Production\"**
-3. Click **\"Run workflow\"**
+2. Select **"Deploy to Production"**
+3. Click **"Run workflow"**
 4. Select `main` branch
-5. Click **\"Run workflow\"** button
+5. Click **"Run workflow"** button
 
 ## Monitoring
 
@@ -165,13 +167,13 @@ If a deployment causes issues:
 
 ```bash
 # SSH into server
-ssh haider@182.191.91.226
+ssh <your-user>@<your-server-ip>
 
 # List backups
 ls -la /opt/supamanage-backups/
 
 # Restore from backup
-BACKUP=\"20250117-123456\"  # Your backup timestamp
+BACKUP="20250117-123456"  # Your backup timestamp
 cd /opt/supamanage
 cp /opt/supamanage-backups/$BACKUP/.env .
 cp /opt/supamanage-backups/$BACKUP/supa-manager.env supa-manager/.env
@@ -191,6 +193,7 @@ docker compose -f docker-compose.prod.yml up -d
 - **Secrets**: Encrypted by GitHub, never exposed
 - **Variables**: Plain text, visible to repo collaborators
 - **Separation**: Only truly sensitive data is encrypted
+- **No hardcoded credentials**: All sensitive values in GitHub Secrets
 
 ### Recommended Improvements
 
@@ -198,10 +201,10 @@ docker compose -f docker-compose.prod.yml up -d
 
 ```bash
 # Generate SSH key
-ssh-keygen -t ed25519 -C \"github-actions\" -f github-actions-key
+ssh-keygen -t ed25519 -C "github-actions" -f github-actions-key
 
 # Copy to server
-ssh-copy-id -i github-actions-key.pub haider@182.191.91.226
+ssh-copy-id -i github-actions-key.pub <your-user>@<your-server-ip>
 
 # In GitHub secrets:
 # Delete: PRODUCTION_PASSWORD
@@ -218,17 +221,17 @@ with:
 
 ## Troubleshooting
 
-### \"Missing environment variable\"
+### "Missing environment variable"
 - Verify all 6 secrets are configured
 - Verify all 20 variables are configured
 - Check for typos (case-sensitive!)
 
-### \"SSH connection failed\"
-- Verify public IP: 182.191.91.226
+### "SSH connection failed"
+- Verify public IP is correct
 - Check port 22 is accessible
-- Test: `ssh haider@182.191.91.226`
+- Test SSH manually first
 
-### \"Health checks failed\"
+### "Health checks failed"
 - Services may need more startup time
 - Check logs: `docker compose -f docker-compose.prod.yml logs`
 - Verify Nginx configuration
