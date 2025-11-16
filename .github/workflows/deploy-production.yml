@@ -1,0 +1,131 @@
+name: Deploy to Production
+
+# Trigger deployment on push to main branch
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    name: Deploy to Production Server
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          password: ${{ secrets.PRODUCTION_PASSWORD }}
+          port: 22
+          script_stop: true  # Stop on first error
+          script: |
+            echo "=== Starting Deployment ==="
+            echo "Timestamp: $(date)"
+            
+            # Navigate to installation directory
+            cd /opt/supamanage || exit 1
+            
+            # Backup current state
+            echo "Creating backup of current deployment..."
+            BACKUP_DIR="/opt/supamanage-backups/$(date +%Y%m%d-%H%M%S)"
+            mkdir -p "$BACKUP_DIR"
+            cp docker-compose.prod.yml "$BACKUP_DIR/" || true
+            
+            # Pull latest code
+            echo "Pulling latest code from GitHub..."
+            git fetch origin
+            CURRENT_COMMIT=$(git rev-parse HEAD)
+            git pull origin main
+            NEW_COMMIT=$(git rev-parse HEAD)
+            
+            if [ "$CURRENT_COMMIT" = "$NEW_COMMIT" ]; then
+              echo "No new changes detected. Skipping deployment."
+              exit 0
+            fi
+            
+            echo "Updating from commit $CURRENT_COMMIT to $NEW_COMMIT"
+            
+            # Check if supa-manager code changed
+            SUPA_MANAGER_CHANGED=$(git diff --name-only $CURRENT_COMMIT $NEW_COMMIT | grep "^supa-manager/" || true)
+            
+            # Check if studio changed
+            STUDIO_CHANGED=$(git diff --name-only $CURRENT_COMMIT $NEW_COMMIT | grep "^studio/" || true)
+            
+            # Rebuild and restart services
+            if [ -n "$SUPA_MANAGER_CHANGED" ]; then
+              echo "Supa-manager code changed, rebuilding API..."
+              docker compose -f docker-compose.prod.yml build supa-manager
+              docker compose -f docker-compose.prod.yml up -d supa-manager
+              echo "API service restarted"
+            else
+              echo "No changes in supa-manager, skipping API rebuild"
+            fi
+            
+            if [ -n "$STUDIO_CHANGED" ]; then
+              echo "Studio code changed, rebuilding Studio..."
+              cd studio
+              ./build.sh v1.24.04 supa-manager/studio:production .env
+              cd ..
+              docker compose -f docker-compose.prod.yml up -d studio
+              echo "Studio service restarted"
+            else
+              echo "No changes in studio, skipping Studio rebuild"
+            fi
+            
+            # If docker-compose.prod.yml changed, restart all services
+            COMPOSE_CHANGED=$(git diff --name-only $CURRENT_COMMIT $NEW_COMMIT | grep "^docker-compose.prod.yml" || true)
+            if [ -n "$COMPOSE_CHANGED" ]; then
+              echo "Docker compose configuration changed, restarting all services..."
+              docker compose -f docker-compose.prod.yml up -d
+            fi
+            
+            # Show running containers
+            echo "\n=== Deployment Complete ==="
+            echo "Running containers:"
+            docker compose -f docker-compose.prod.yml ps
+            
+            # Check health
+            echo "\nChecking service health..."
+            sleep 5
+            
+            # Check API health
+            API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/ || echo "000")
+            if [ "$API_STATUS" = "200" ] || [ "$API_STATUS" = "404" ]; then
+              echo "✓ API is responding (HTTP $API_STATUS)"
+            else
+              echo "✗ API health check failed (HTTP $API_STATUS)"
+              exit 1
+            fi
+            
+            # Check Studio health
+            STUDIO_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/ || echo "000")
+            if [ "$STUDIO_STATUS" = "200" ] || [ "$STUDIO_STATUS" = "307" ]; then
+              echo "✓ Studio is responding (HTTP $STUDIO_STATUS)"
+            else
+              echo "✗ Studio health check failed (HTTP $STUDIO_STATUS)"
+              exit 1
+            fi
+            
+            echo "\n=== Deployment Successful ==="
+            echo "Deployed commit: $NEW_COMMIT"
+            echo "Production URL: https://www.supamanage.buzz"
+            echo "Studio URL: https://studio.supamanage.buzz"
+      
+      - name: Notify on Success
+        if: success()
+        run: |
+          echo "✓ Deployment completed successfully"
+          echo "Production is now running the latest code from main branch"
+      
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "✗ Deployment failed"
+          echo "Please check the logs and fix any issues"
+          exit 1
