@@ -11,22 +11,34 @@
 
 In the production environment, go to **"Environment secrets"** and add these **6 secrets**:
 
+| Secret Name | Where to Find Value | Example |
+|------------|---------------------|---------|
+| `PRODUCTION_HOST` | Your production server's public IP | `203.0.113.10` |
+| `PRODUCTION_USER` | Your SSH username | `ubuntu` or `admin` |
+| `PRODUCTION_PASSWORD` | Your SSH password | `YourSecurePassword123` |
+| `DATABASE_PASSWORD` | From server: `/opt/supamanage/.env` | Generated secret |
+| `JWT_SECRET` | From server: `/opt/supamanage/supa-manager/.env` | Generated secret (64+ chars) |
+| `ENCRYPTION_SECRET` | From server: `/opt/supamanage/supa-manager/.env` | Generated secret (64+ chars) |
+
+**To get values from your server:**
 ```bash
-PRODUCTION_HOST=182.191.91.226
-PRODUCTION_USER=haider
-PRODUCTION_PASSWORD=Admin@786
-DATABASE_PASSWORD=ijKSTr78nr751qI6TjJfYVNeZA/cmcZ7LHlk9I2wliM=
-JWT_SECRET=Ev8o5bRYicouOZaiTPHIEe64xGCv52QQa4dp8XcLv1MEIomP1psZ6jjAebEbhepX
-ENCRYPTION_SECRET=wxIJwYzb5ghyBMUEdYzlliflIg54n6bRPiYTH+lO08x/wUQ+bZVNS5xmNhtb7qQp
+ssh <your-user>@<your-server-ip>
+
+# Get the secret values
+grep DATABASE_PASSWORD /opt/supamanage/.env
+grep JWT_SECRET /opt/supamanage/supa-manager/.env
+grep ENCRYPTION_SECRET /opt/supamanage/supa-manager/.env
 ```
 
 ## Step 3: Add Variables (Plain Text)
 
 In the production environment, go to **"Environment variables"** and add these **20 variables**:
 
+**Replace `yourdomain.com` with your actual domain!**
+
 ```bash
-DOMAIN_BASE=supamanage.buzz
-DOMAIN_STUDIO_URL=https://studio.supamanage.buzz
+DOMAIN_BASE=yourdomain.com
+DOMAIN_STUDIO_URL=https://studio.yourdomain.com
 SERVICE_VERSION_URL=https://placeholder.local/updates
 POSTGRES_DISK_SIZE=10
 POSTGRES_DEFAULT_VERSION=15.1
@@ -36,13 +48,13 @@ PROVISIONING_DOCKER_HOST=unix:///var/run/docker.sock
 PROVISIONING_PROJECTS_DIR=/root/projects
 PROVISIONING_BASE_POSTGRES_PORT=5433
 PROVISIONING_BASE_KONG_HTTP_PORT=54321
-PLATFORM_PG_META_URL=https://www.supamanage.buzz/pg
-NEXT_PUBLIC_SITE_URL=https://studio.supamanage.buzz
-NEXT_PUBLIC_SUPABASE_URL=https://www.supamanage.buzz
+PLATFORM_PG_META_URL=https://www.yourdomain.com/pg
+NEXT_PUBLIC_SITE_URL=https://studio.yourdomain.com
+NEXT_PUBLIC_SUPABASE_URL=https://www.yourdomain.com
 NEXT_PUBLIC_SUPABASE_ANON_KEY=aaa.bbb.ccc
-NEXT_PUBLIC_GOTRUE_URL=https://www.supamanage.buzz/auth
-NEXT_PUBLIC_API_URL=https://www.supamanage.buzz
-NEXT_PUBLIC_API_ADMIN_URL=https://www.supamanage.buzz
+NEXT_PUBLIC_GOTRUE_URL=https://www.yourdomain.com/auth
+NEXT_PUBLIC_API_URL=https://www.yourdomain.com
+NEXT_PUBLIC_API_ADMIN_URL=https://www.yourdomain.com
 NEXT_PUBLIC_HCAPTCHA_SITE_KEY=10000000-ffff-ffff-ffff-000000000001
 ALLOW_SIGNUP=true
 ```
@@ -63,8 +75,8 @@ ALLOW_SIGNUP=true
 
 ## Step 6: Verify Production
 
-1. Visit: https://www.supamanage.buzz
-2. Visit: https://studio.supamanage.buzz
+1. Visit: https://www.yourdomain.com (your main domain)
+2. Visit: https://studio.yourdomain.com (your studio domain)
 3. Both should be working!
 
 ---
@@ -96,16 +108,20 @@ You can also manually trigger a deployment:
 - Variables are case-sensitive!
 
 ### "SSH connection failed"
-- Verify `PRODUCTION_HOST` is correct: `182.191.91.226`
+- Verify `PRODUCTION_HOST` is your server's public IP
 - Check that port 22 is accessible from the internet
+- Test SSH manually: `ssh <user>@<ip>`
 - Verify SSH credentials are correct
 
 ### "Health checks failed"
 - Services might need more time to start
 - Check deployment logs for errors
-- SSH into server and check container logs
+- SSH into server and check container logs:
+  ```bash
+  docker compose -f docker-compose.prod.yml logs
+  ```
 
-## Security Note
+## Security Notes
 
 **Secrets** (encrypted, never visible):
 - SSH credentials
@@ -117,4 +133,19 @@ You can also manually trigger a deployment:
 - Configuration values
 - Port numbers
 
-This separation follows security best practices!
+**Important:** Never commit secrets to git or share them publicly! Store them only in GitHub Secrets.
+
+## Network Requirements
+
+- Your production server must have a public IP accessible from the internet
+- Port 22 (SSH) must be open for GitHub Actions to connect
+- If behind a router/firewall, configure port forwarding for SSH
+
+## Next Steps
+
+After successful deployment:
+1. Set up SSH keys instead of password (more secure)
+2. Configure automated backups
+3. Set up monitoring/alerts
+4. Create a staging environment
+5. Add automated tests before deployment
