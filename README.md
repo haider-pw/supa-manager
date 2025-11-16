@@ -1,7 +1,22 @@
 # SupaManager
 
-A project by Harry Bairstow
+**Originally created by [Harry Bairstow](https://twitter.com/TheHarryET)**
+**Enhanced and maintained by [Syed Haider Hassan](https://github.com/haider-pw)**
+
 Manage self-hosted Supabase instances using the Supabase Studio.
+
+> **This is an enhanced fork** of the [original SupaManager project](https://github.com/TheHarryET/supa-manager) with improvements and comprehensive documentation.
+
+## Key Improvements in This Fork
+
+- ✅ **Comprehensive Documentation** - Complete wiki with 25+ detailed guides
+- ✅ **Bug Fixes** - Fixed API endpoints, JWT handling, and database migrations
+- ✅ **Security Improvements** - Removed exposed credentials, improved validation
+- ✅ **Enhanced Developer Experience** - Added MCP server support, debugging guides
+- ✅ **Better Error Handling** - Improved API response formats and error messages
+- ✅ **Production Ready** - Deployment guides, monitoring, and backup procedures
+
+📖 See [CHANGELOG.md](wiki/Changelog.md) for detailed improvements.
 
 ---
 
@@ -413,6 +428,7 @@ docker compose up -d --build
 
 For more detailed technical documentation, see:
 
+- **[Wiki Home](https://github.com/haider-pw/supa-manager/wiki)** - Complete documentation wiki
 - **[CLAUDE.md](CLAUDE.md)** - Quick reference for development
 - **[PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md)** - Complete codebase analysis
 - **[SUPABASE_ARCHITECTURE.md](SUPABASE_ARCHITECTURE.md)** - Full Supabase service architecture
@@ -420,8 +436,29 @@ For more detailed technical documentation, see:
 
 ---
 
-## Licence
+## About This Fork
+
+### Upstream Project
+
+This fork is based on Harry Bairstow's original SupaManager project:
+- **Original Repository:** https://github.com/TheHarryET/supa-manager
+- **Author:** [@TheHarryET](https://twitter.com/TheHarryET)
+
+### Contributing
+
+Contributions to this fork are welcome! See [Contributing Guide](https://github.com/haider-pw/supa-manager/wiki/Contributing) for details.
+
+If you find improvements that would benefit the upstream project, consider contributing to Harry's original repository as well.
+
+---
+
+## License
+
+**Original Project:**
 Copyright (C) 2024 Harry Bairstow
+
+**This Fork:**
+Copyright (C) 2025 Syed Haider Hassan
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -435,3 +472,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+### Attribution
+
+This project is a fork of [Harry Bairstow's SupaManager](https://github.com/TheHarryET/supa-manager).
+All modifications and enhancements in this fork are also licensed under GPL v3.
