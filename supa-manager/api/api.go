@@ -239,6 +239,7 @@ func (a *Api) Router() *gin.Engine {
 				specificProject.POST("/tables", a.postPlatformPgMetaTables)
 				specificProject.PATCH("/tables", a.patchPlatformPgMetaTables)
 				specificProject.DELETE("/tables", a.deletePlatformPgMetaTables)
+				specificProject.POST("/columns", a.postPlatformPgMetaColumns)
 				specificProject.GET("/types", a.getPlatformPgMetaTypes)
 				specificProject.GET("/publications", a.getPlatformPgMetaPublications)
 			}
