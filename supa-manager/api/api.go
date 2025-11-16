@@ -235,6 +235,7 @@ func (a *Api) Router() *gin.Engine {
 			specificProject := platformPgMeta.Group("/:ref")
 			{
 				specificProject.POST("/query", a.postPlatformPgMetaQuery)
+				specificProject.GET("/tables", a.getPlatformPgMetaTables)
 				specificProject.GET("/types", a.getPlatformPgMetaTypes)
 				specificProject.GET("/publications", a.getPlatformPgMetaPublications)
 			}
