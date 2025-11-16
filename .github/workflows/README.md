@@ -29,8 +29,8 @@ This directory contains GitHub Actions workflows for automating deployment and t
 
 You need to configure these secrets in your GitHub repository settings:
 
-1. **PRODUCTION_HOST**: The production server IP address
-   - Value: `192.168.100.14`
+1. **PRODUCTION_HOST**: The production server public IP address
+   - Value: `182.191.91.226`
 
 2. **PRODUCTION_USER**: SSH username for production server
    - Value: `haider`
@@ -72,6 +72,11 @@ You can manually trigger a deployment:
 - Password stored as encrypted GitHub secret
 - Only accessible to workflow runs
 
+### Network Configuration
+- **Public IP**: 182.191.91.226 (used by GitHub Actions)
+- **Private IP**: 192.168.100.14 (internal network)
+- Production server is accessible from internet via public IP
+
 ### Recommended: Switch to SSH Keys (More Secure)
 
 For better security, you should switch to SSH key authentication:
@@ -80,8 +85,8 @@ For better security, you should switch to SSH key authentication:
 # On your local machine, generate SSH key for GitHub Actions
 ssh-keygen -t ed25519 -C "github-actions@supamanage" -f github-actions-key
 
-# Copy public key to production server
-ssh-copy-id -i github-actions-key.pub haider@192.168.100.14
+# Copy public key to production server (use public IP)
+ssh-copy-id -i github-actions-key.pub haider@182.191.91.226
 
 # In GitHub secrets, replace PRODUCTION_PASSWORD with:
 # PRODUCTION_SSH_KEY = contents of github-actions-key (private key)
@@ -105,8 +110,8 @@ Then update the workflow to use `key` instead of `password`:
 If a deployment causes issues, you can rollback:
 
 ```bash
-# SSH into production server
-ssh haider@192.168.100.14
+# SSH into production server (use public IP from internet, or private IP from local network)
+ssh haider@182.191.91.226
 
 # List available backups
 ls -la /opt/supamanage-backups/
@@ -123,11 +128,19 @@ docker compose -f docker-compose.prod.yml build
 docker compose -f docker-compose.prod.yml up -d
 ```
 
+**Note:** If you're on the same local network as the server, you can also use the private IP `192.168.100.14` for SSH access.
+
 ## Troubleshooting
 
 ### Deployment fails with "Permission denied"
 - Check that SSH credentials in GitHub secrets are correct
 - Verify the production server is accessible from GitHub's IP ranges
+- Make sure SSH is accessible on port 22 from the internet
+
+### Deployment fails with "Connection refused" or "Timeout"
+- Verify the public IP (182.191.91.226) is correct
+- Check that port 22 is open in firewall/router for SSH
+- Ensure port forwarding is configured if behind NAT
 
 ### Deployment succeeds but services aren't updated
 - Check Docker logs: `docker compose -f docker-compose.prod.yml logs`
