@@ -19,27 +19,44 @@ func (a *Api) getPlatformProject(c *gin.Context) {
 		return
 	}
 
+	// Extract database connection details from provisioned infrastructure
+	dbHost := "localhost" // Default for local Docker setup
+	dbPort := int32(0)
+	dbName := "postgres"
+	dbUser := "postgres"
+
+	// If project is provisioned, use actual port
+	if project.PostgresPort.Valid {
+		dbPort = project.PostgresPort.Int32
+	}
+
+	// Format inserted_at timestamp
+	insertedAt := ""
+	if project.CreatedAt.Valid {
+		insertedAt = project.CreatedAt.Time.Format("2006-01-02T15:04:05.999Z")
+	}
+
 	c.JSON(http.StatusOK, Project{
 		Id:                       project.ID,
 		Ref:                      project.ProjectRef,
 		Name:                     project.ProjectName,
 		Status:                   project.Status,
 		OrganizationId:           project.OrganizationID,
-		InsertedAt:               "",
-		SubscriptionId:           "-",
-		CloudProvider:            "k8s",
-		Region:                   "mars-1",
-		DiskVolumeSizeGb:         0,
-		Size:                     "",
-		DbUserSupabase:           "",
-		DbPassSupabase:           "",
-		DbDnsName:                "",
-		DbHost:                   "",
-		DbPort:                   0,
-		DbName:                   "",
+		InsertedAt:               insertedAt,
+		SubscriptionId:           "free-tier",
+		CloudProvider:            project.CloudProvider,
+		Region:                   project.Region,
+		DiskVolumeSizeGb:         8, // Default volume size
+		Size:                     "small",
+		DbUserSupabase:           dbUser,
+		DbPassSupabase:           "", // Never expose password in API
+		DbDnsName:                dbHost,
+		DbHost:                   dbHost,
+		DbPort:                   dbPort,
+		DbName:                   dbName,
 		SslEnforced:              false,
 		WalgEnabled:              false,
-		InfraComputeSize:         "",
+		InfraComputeSize:         "small",
 		PreviewBranchRefs:        []interface{}{},
 		IsBranchEnabled:          false,
 		IsPhysicalBackupsEnabled: false,
