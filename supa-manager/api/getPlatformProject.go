@@ -1,8 +1,10 @@
 package api
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"supamanager.io/supa-manager/utils"
 )
 
 func (a *Api) getPlatformProject(c *gin.Context) {
@@ -40,6 +42,20 @@ func (a *Api) getPlatformProject(c *gin.Context) {
 		insertedAt = project.CreatedAt.Time.Format("2006-01-02T15:04:05.999Z")
 	}
 
+	// Generate encrypted connection string
+	// Format: postgresql://user:password@host:port/database
+	// Note: Using a placeholder password - in production this should come from provisioner
+	dbPassword := "postgres" // TODO: Retrieve from secure storage
+	connectionStringPlain := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
+		dbUser, dbPassword, dbHost, dbPort, dbName)
+
+	// Encrypt connection string using ENCRYPTION_SECRET
+	connectionString, err := utils.EncryptAES(connectionStringPlain, a.config.EncryptionSecret)
+	if err != nil {
+		a.logger.Error(fmt.Sprintf("Failed to encrypt connection string: %v", err))
+		connectionString = "" // Don't expose plaintext on error
+	}
+
 	c.JSON(http.StatusOK, Project{
 		Id:                       project.ID,
 		Ref:                      project.ProjectRef,
@@ -64,5 +80,6 @@ func (a *Api) getPlatformProject(c *gin.Context) {
 		PreviewBranchRefs:        []interface{}{},
 		IsBranchEnabled:          false,
 		IsPhysicalBackupsEnabled: false,
+		ConnectionString:         connectionString, // Encrypted connection string
 	})
 }

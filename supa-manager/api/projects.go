@@ -46,5 +46,6 @@ type Project struct {
 	PreviewBranchRefs        []interface{} `json:"preview_branch_refs"`
 	IsBranchEnabled          bool          `json:"is_branch_enabled"`
 	IsPhysicalBackupsEnabled bool          `json:"is_physical_backups_enabled"`
-	JwtSecret                string        `json:"jwt_secret,omitempty"` // JWT secret for the project
+	JwtSecret                string        `json:"jwt_secret,omitempty"`      // JWT secret for the project
+	ConnectionString         string        `json:"connectionString,omitempty"` // Encrypted PostgreSQL connection string
 }
