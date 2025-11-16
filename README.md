@@ -271,6 +271,40 @@ supabase-manager/
 
 ---
 
+## API Endpoints (Update v4)
+
+The API provides Studio-compatible endpoints for managing Supabase projects.
+
+### Project Management
+- `GET /projects/:ref/status` - Project status
+- `GET /projects/:ref/api` - Project API configuration and keys
+- `GET /projects/:ref/upgrade/status` - Upgrade eligibility and status
+- `GET /projects/:ref/health` - Service health checks
+- `GET /projects/:ref/supervisor` - Supervisor process status
+- `GET /projects/:ref/jwt-secret-update-status` - JWT secret update status
+
+### Analytics (Stub Implementation)
+- `GET /projects/:ref/analytics/endpoints/usage.api-counts` - API usage counts
+- `GET /projects/:ref/analytics/endpoints/usage.api-requests-count` - Request counts
+- `GET /platform/projects/:ref/analytics/endpoints/usage.api-counts` - Platform usage
+- `GET /platform/projects/:ref/analytics/endpoints/usage.api-requests-count` - Platform requests
+
+### Database Metadata (pg-meta)
+- `POST /platform/pg-meta/:ref/query` - Execute PostgreSQL metadata queries
+- `GET /platform/pg-meta/:ref/types` - List custom PostgreSQL types
+- `GET /platform/pg-meta/:ref/publications` - List PostgreSQL publications
+
+### Platform Management
+- `GET /platform/projects` - List all projects
+- `POST /platform/projects` - Create new project
+- `GET /platform/projects/:ref` - Get project details
+- `GET /platform/projects/:ref/settings` - Project settings
+- `GET /organizations` - List user's organizations
+
+**Note:** Analytics and pg-meta endpoints currently return empty/mock data. Full implementation coming in Phase 3.
+
+---
+
 ## Configuration
 
 ### Environment Variables (supa-manager/.env)
@@ -316,21 +350,27 @@ NEXT_PUBLIC_GOTRUE_URL=http://localhost:8080/auth
 
 ## Current Status
 
-### ✅ What's Working
+### ✅ What's Working (Update v4)
 
 - User authentication (signup/login)
 - Organization creation and management
-- Project metadata creation
-- Studio UI integration
+- Project metadata creation and management
+- Studio UI integration (UI loads without errors)
 - API endpoints for project management
-- Database migrations
+- Database migrations with infrastructure columns
+- Project health monitoring endpoints
+- Project upgrade status tracking
+- Analytics endpoints (stub implementation)
+- pg-meta database metadata endpoints
+- JWT key storage and retrieval
+- Proper nullable field handling
 
 ### ⚠️ What's Not Working (Yet)
 
 - **Dynamic Supabase project provisioning** - Projects are created in the database but no actual Supabase infrastructure is spun up
-- Project status tracking (projects remain in "UNKNOWN" status)
-- Project lifecycle management (pause/resume/delete)
-- Real JWT key generation (currently returns placeholder "a.b.c")
+- Project lifecycle management (pause/resume/delete) - endpoints commented out pending provisioning
+- Real analytics data (endpoints return empty data)
+- pg-meta database connection (returns empty data)
 
 ### 🚧 Roadmap
 
