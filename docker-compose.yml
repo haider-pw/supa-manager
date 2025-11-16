@@ -1,4 +1,3 @@
-version: "3"
 services:
   database:
     image: supabase/postgres:15.1.0.147
@@ -8,6 +7,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: supabase
+    volumes:
+      - supamanager-db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -33,6 +34,14 @@ services:
       DOMAIN_BASE: supamanager.io
       DOMAIN_DNS_HOOK_URL: http://localhost:8081
       DOMAIN_DNS_HOOK_KEY: ${DOMAIN_DNS_HOOK_KEY:-change-me-in-production}
+      PROVISIONING_ENABLED: "true"
+      PROVISIONING_DOCKER_HOST: unix:///var/run/docker.sock
+      PROVISIONING_PROJECTS_DIR: /projects
+      PROVISIONING_BASE_POSTGRES_PORT: 5433
+      PROVISIONING_BASE_KONG_HTTP_PORT: 54321
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./supa-manager/projects:/projects
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O-", "http://localhost:8080/status"]
       interval: 10s
@@ -56,3 +65,6 @@ services:
     depends_on:
       supa-manager:
         condition: service_healthy
+
+volumes:
+  supamanager-db-data:

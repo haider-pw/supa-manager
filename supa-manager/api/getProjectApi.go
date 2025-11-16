@@ -3,7 +3,9 @@ package api
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"time"
 )
 
 type ProjectAutoApiService struct {
@@ -45,6 +47,33 @@ func (a *Api) getProjectApi(c *gin.Context) {
 		return
 	}
 
+	// Get real keys - use stored keys if available, otherwise generate from jwt_secret
+	var anonKey, serviceKey string
+
+	if proj.AnonKey.Valid && proj.AnonKey.String != "" {
+		anonKey = proj.AnonKey.String
+	} else {
+		// Generate anon key from JWT secret
+		var genErr error
+		anonKey, genErr = a.generateProjectJWT(proj.JwtSecret, "anon")
+		if genErr != nil {
+			c.JSON(500, gin.H{"error": "Failed to generate anon key"})
+			return
+		}
+	}
+
+	if proj.ServiceRoleKey.Valid && proj.ServiceRoleKey.String != "" {
+		serviceKey = proj.ServiceRoleKey.String
+	} else {
+		// Generate service_role key from JWT secret
+		var genErr error
+		serviceKey, genErr = a.generateProjectJWT(proj.JwtSecret, "service_role")
+		if genErr != nil {
+			c.JSON(500, gin.H{"error": "Failed to generate service key"})
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"autoApiService": ProjectAutoApiService{
 			Id:   0,
@@ -84,8 +113,28 @@ func (a *Api) getProjectApi(c *gin.Context) {
 			}{
 				Ref: proj.ProjectRef,
 			},
-			DefaultApiKey: "a.b.c",
-			ServiceApiKey: "a.b.c",
+			DefaultApiKey: anonKey,
+			ServiceApiKey: serviceKey,
 		},
 	})
+}
+
+// generateProjectJWT generates a Supabase-compatible JWT token
+// role can be "anon" or "service_role"
+func (a *Api) generateProjectJWT(jwtSecret string, role string) (string, error) {
+	// Supabase JWT claims
+	claims := jwt.MapClaims{
+		"iss":  "supamanager",
+		"role": role,
+		"iat":  time.Now().Unix(),
+		"exp":  time.Now().AddDate(10, 0, 0).Unix(), // 10 years expiry (like Supabase)
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return "", err
+	}
+
+	return signedToken, nil
 }

@@ -17,3 +17,6 @@
 npm-debug.log*
 # Wiki is separate repository
 wiki/
+
+# Provisioned project directories - contain secrets and runtime data
+supa-manager/projects/

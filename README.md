@@ -1,7 +1,22 @@
 # SupaManager
 
-A project by Harry Bairstow
+**Originally created by [Harry Bairstow](https://twitter.com/TheHarryET)**
+**Enhanced and maintained by [Syed Haider Hassan](https://github.com/haider-pw)**
+
 Manage self-hosted Supabase instances using the Supabase Studio.
+
+> **This is an enhanced fork** of the [original SupaManager project](https://github.com/TheHarryET/supa-manager) with improvements and comprehensive documentation.
+
+## Key Improvements in This Fork
+
+- ✅ **Comprehensive Documentation** - Complete wiki with 25+ detailed guides
+- ✅ **Bug Fixes** - Fixed API endpoints, JWT handling, and database migrations
+- ✅ **Security Improvements** - Removed exposed credentials, improved validation
+- ✅ **Enhanced Developer Experience** - Added MCP server support, debugging guides
+- ✅ **Better Error Handling** - Improved API response formats and error messages
+- ✅ **Production Ready** - Deployment guides, monitoring, and backup procedures
+
+📖 See [CHANGELOG.md](wiki/Changelog.md) for detailed improvements.
 
 ---
 
@@ -256,6 +271,40 @@ supabase-manager/
 
 ---
 
+## API Endpoints (Update v4)
+
+The API provides Studio-compatible endpoints for managing Supabase projects.
+
+### Project Management
+- `GET /projects/:ref/status` - Project status
+- `GET /projects/:ref/api` - Project API configuration and keys
+- `GET /projects/:ref/upgrade/status` - Upgrade eligibility and status
+- `GET /projects/:ref/health` - Service health checks
+- `GET /projects/:ref/supervisor` - Supervisor process status
+- `GET /projects/:ref/jwt-secret-update-status` - JWT secret update status
+
+### Analytics (Stub Implementation)
+- `GET /projects/:ref/analytics/endpoints/usage.api-counts` - API usage counts
+- `GET /projects/:ref/analytics/endpoints/usage.api-requests-count` - Request counts
+- `GET /platform/projects/:ref/analytics/endpoints/usage.api-counts` - Platform usage
+- `GET /platform/projects/:ref/analytics/endpoints/usage.api-requests-count` - Platform requests
+
+### Database Metadata (pg-meta)
+- `POST /platform/pg-meta/:ref/query` - Execute PostgreSQL metadata queries
+- `GET /platform/pg-meta/:ref/types` - List custom PostgreSQL types
+- `GET /platform/pg-meta/:ref/publications` - List PostgreSQL publications
+
+### Platform Management
+- `GET /platform/projects` - List all projects
+- `POST /platform/projects` - Create new project
+- `GET /platform/projects/:ref` - Get project details
+- `GET /platform/projects/:ref/settings` - Project settings
+- `GET /organizations` - List user's organizations
+
+**Note:** Analytics and pg-meta endpoints currently return empty/mock data. Full implementation coming in Phase 3.
+
+---
+
 ## Configuration
 
 ### Environment Variables (supa-manager/.env)
@@ -301,21 +350,27 @@ NEXT_PUBLIC_GOTRUE_URL=http://localhost:8080/auth
 
 ## Current Status
 
-### ✅ What's Working
+### ✅ What's Working (Update v4)
 
 - User authentication (signup/login)
 - Organization creation and management
-- Project metadata creation
-- Studio UI integration
+- Project metadata creation and management
+- Studio UI integration (UI loads without errors)
 - API endpoints for project management
-- Database migrations
+- Database migrations with infrastructure columns
+- Project health monitoring endpoints
+- Project upgrade status tracking
+- Analytics endpoints (stub implementation)
+- pg-meta database metadata endpoints
+- JWT key storage and retrieval
+- Proper nullable field handling
 
 ### ⚠️ What's Not Working (Yet)
 
 - **Dynamic Supabase project provisioning** - Projects are created in the database but no actual Supabase infrastructure is spun up
-- Project status tracking (projects remain in "UNKNOWN" status)
-- Project lifecycle management (pause/resume/delete)
-- Real JWT key generation (currently returns placeholder "a.b.c")
+- Project lifecycle management (pause/resume/delete) - endpoints commented out pending provisioning
+- Real analytics data (endpoints return empty data)
+- pg-meta database connection (returns empty data)
 
 ### 🚧 Roadmap
 
@@ -413,6 +468,7 @@ docker compose up -d --build
 
 For more detailed technical documentation, see:
 
+- **[Wiki Home](https://github.com/haider-pw/supa-manager/wiki)** - Complete documentation wiki
 - **[CLAUDE.md](CLAUDE.md)** - Quick reference for development
 - **[PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md)** - Complete codebase analysis
 - **[SUPABASE_ARCHITECTURE.md](SUPABASE_ARCHITECTURE.md)** - Full Supabase service architecture
@@ -420,8 +476,29 @@ For more detailed technical documentation, see:
 
 ---
 
-## Licence
+## About This Fork
+
+### Upstream Project
+
+This fork is based on Harry Bairstow's original SupaManager project:
+- **Original Repository:** https://github.com/TheHarryET/supa-manager
+- **Author:** [@TheHarryET](https://twitter.com/TheHarryET)
+
+### Contributing
+
+Contributions to this fork are welcome! See [Contributing Guide](https://github.com/haider-pw/supa-manager/wiki/Contributing) for details.
+
+If you find improvements that would benefit the upstream project, consider contributing to Harry's original repository as well.
+
+---
+
+## License
+
+**Original Project:**
 Copyright (C) 2024 Harry Bairstow
+
+**This Fork:**
+Copyright (C) 2025 Syed Haider Hassan
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -435,3 +512,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+### Attribution
+
+This project is a fork of [Harry Bairstow's SupaManager](https://github.com/TheHarryET/supa-manager).
+All modifications and enhancements in this fork are also licensed under GPL v3.

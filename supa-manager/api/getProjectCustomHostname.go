@@ -18,7 +18,7 @@ func (a *Api) getProjectCustomHostname(c *gin.Context) {
 	// Return empty custom hostname configuration
 	// TODO: Implement custom domain management in future phases
 	c.JSON(http.StatusOK, gin.H{
-		"customHostname": nil,
+		"customHostname": "",
 		"status":         "not_configured",
 		"data":           gin.H{},
 	})

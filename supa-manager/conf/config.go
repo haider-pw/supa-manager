@@ -19,15 +19,24 @@ type DomainSettings struct {
 	DnsHookKey *string `json:"dns_hook_key" split_words:"true"`
 }
 
+type ProvisioningSettings struct {
+	Enabled          bool   `json:"enabled" default:"true"`
+	DockerHost       string `json:"docker_host" split_words:"true" default:"unix:///var/run/docker.sock"`
+	ProjectsDir      string `json:"projects_dir" split_words:"true" default:"./projects"`
+	BasePostgresPort int    `json:"base_postgres_port" split_words:"true" default:"5433"`
+	BaseKongHTTPPort int    `json:"base_kong_http_port" split_words:"true" default:"54321"`
+}
+
 type Config struct {
-	DatabaseUrl       string           `json:"database_url" split_words:"true" required:"true"`
-	Port              int              `json:"port" default:"8080"`
-	EncryptionSecret  string           `json:"encryption_secret" split_words:"true" required:"true"`
-	JwtSecret         string           `json:"jwt_secret" split_words:"true" required:"true"`
-	AllowSignup       bool             `json:"allow_signup" split_words:"true" default:"false"`
-	ServiceVersionUrl string           `json:"service_version_url" split_words:"true" required:"true" default:"https://supamanager.io/updates"`
-	Domain            DomainSettings   `json:"domain" required:"true"`
-	Postgres          PostgresSettings `json:"postgres" required:"true"`
+	DatabaseUrl       string               `json:"database_url" split_words:"true" required:"true"`
+	Port              int                  `json:"port" default:"8080"`
+	EncryptionSecret  string               `json:"encryption_secret" split_words:"true" required:"true"`
+	JwtSecret         string               `json:"jwt_secret" split_words:"true" required:"true"`
+	AllowSignup       bool                 `json:"allow_signup" split_words:"true" default:"false"`
+	ServiceVersionUrl string               `json:"service_version_url" split_words:"true" required:"true" default:"https://supamanager.io/updates"`
+	Domain            DomainSettings       `json:"domain" required:"true"`
+	Postgres          PostgresSettings     `json:"postgres" required:"true"`
+	Provisioning      ProvisioningSettings `json:"provisioning"`
 }
 
 func LoadConfig(filename string) (*Config, error) {
