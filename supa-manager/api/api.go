@@ -24,7 +24,7 @@ type Api struct {
 	queries     *database.Queries
 	pgPool      *pgxpool.Pool
 	argon       argon2.Config
-	provisioner *provisioner.Provisioner
+	provisioner provisioner.Provisioner
 }
 
 func CreateApi(logger *slog.Logger, config *conf.Config) (*Api, error) {
@@ -47,18 +47,20 @@ func CreateApi(logger *slog.Logger, config *conf.Config) (*Api, error) {
 	}
 
 	// Initialize provisioner if enabled
-	var prov *provisioner.Provisioner
+	var prov provisioner.Provisioner
 	if config.Provisioning.Enabled {
-		provConfig := &provisioner.Config{
-			DockerHost:       config.Provisioning.DockerHost,
-			ProjectsDir:      config.Provisioning.ProjectsDir,
-			BasePostgresPort: config.Provisioning.BasePostgresPort,
-			BaseKongHTTPPort: config.Provisioning.BaseKongHTTPPort,
-			DomainBase:       config.Domain.Base,
-			StudioURL:        config.Domain.StudioUrl,
+		// Use NewDockerProvisioner with projects directory and templates directory
+		dockerProv, err := provisioner.NewDockerProvisioner(
+			config.Provisioning.ProjectsDir,
+			"./templates", // Template directory for docker-compose files
+		)
+		if err != nil {
+			logger.Warn(fmt.Sprintf("Failed to initialize provisioner: %v", err))
+			logger.Info("Continuing without provisioner - projects can be created but not provisioned")
+		} else {
+			prov = dockerProv
+			logger.Info("Docker provisioner initialized and enabled")
 		}
-		prov = provisioner.NewProvisioner(provConfig, queries)
-		logger.Info("Provisioner initialized and enabled")
 	} else {
 		logger.Info("Provisioner is disabled")
 	}
