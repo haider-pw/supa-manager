@@ -20,8 +20,7 @@ func (a *Api) getPlatformProject(c *gin.Context) {
 	}
 
 	// Extract database connection details from provisioned infrastructure
-	dbHost := "localhost" // Default for local Docker setup
-	dbPort := int32(0)
+	dbPort := int32(5432) // Default PostgreSQL port
 	dbName := "postgres"
 	dbUser := "postgres"
 
@@ -29,6 +28,11 @@ func (a *Api) getPlatformProject(c *gin.Context) {
 	if project.PostgresPort.Valid {
 		dbPort = project.PostgresPort.Int32
 	}
+
+	// Construct database hostname using domain pattern: db.{project-ref}.{base-domain}
+	// Example: db.p1-7cda6e.supamanager.org (matches Supabase pattern)
+	dbHost := "db." + project.ProjectRef + "." + a.config.Domain.Base
+	dbDnsName := dbHost
 
 	// Format inserted_at timestamp
 	insertedAt := ""
@@ -50,7 +54,7 @@ func (a *Api) getPlatformProject(c *gin.Context) {
 		Size:                     "small",
 		DbUserSupabase:           dbUser,
 		DbPassSupabase:           "", // Never expose password in API
-		DbDnsName:                dbHost,
+		DbDnsName:                dbDnsName,
 		DbHost:                   dbHost,
 		DbPort:                   dbPort,
 		DbName:                   dbName,
