@@ -21,6 +21,11 @@ func (a *Api) patchPlatformPgMetaTables(c *gin.Context) {
 	projectRef := c.Param("ref")
 	tableID := c.Query("id")
 
+	if tableID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required query parameter: id"})
+		return
+	}
+
 	var req UpdateTableRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid request body", "details": err.Error()})

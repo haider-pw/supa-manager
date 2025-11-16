@@ -16,6 +16,11 @@ func (a *Api) deletePlatformPgMetaTables(c *gin.Context) {
 	tableID := c.Query("id")
 	cascade := c.Query("cascade") == "true"
 
+	if tableID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required query parameter: id"})
+		return
+	}
+
 	// TODO: Phase 3/4 - Connect to actual project PostgreSQL and delete table
 	// For now, return a mock successful response
 
