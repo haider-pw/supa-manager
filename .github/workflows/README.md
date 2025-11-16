@@ -10,40 +10,124 @@ This directory contains GitHub Actions workflows for automating deployment and t
 
 **What it does:**
 1. Connects to production server via SSH
-2. Pulls latest code from GitHub
-3. Creates a backup of current deployment
-4. Detects which services changed (API or Studio)
-5. Rebuilds only the changed services
-6. Restarts the updated services
-7. Performs health checks
-8. Reports success or failure
+2. **Updates all environment variables** from GitHub Secrets
+3. Pulls latest code from GitHub
+4. Creates a backup of current deployment
+5. Detects which services changed (API or Studio)
+6. Rebuilds only the changed services
+7. Restarts the updated services
+8. Performs health checks
+9. Reports success or failure
 
 **Smart Features:**
+- Centralized environment management via GitHub Secrets
+- Automatic .env file updates on every deployment
 - Only rebuilds services that have code changes
-- Skips deployment if no changes detected
+- Skips code rebuild if only environment changed (just restarts)
 - Creates timestamped backups before deployment
 - Performs health checks after deployment
 - Stops deployment if health checks fail
 
 ## Required GitHub Secrets
 
-You need to configure these secrets in your GitHub repository settings:
+You need to configure these secrets in your GitHub repository settings. The workflow uses **GitHub Environments** for better organization.
 
-1. **PRODUCTION_HOST**: The production server public IP address
-   - Value: `182.191.91.226`
+### SSH Connection (3 secrets)
 
-2. **PRODUCTION_USER**: SSH username for production server
-   - Value: `haider`
+| Secret Name | Value | Description |
+|------------|-------|-------------|
+| `PRODUCTION_HOST` | `182.191.91.226` | Production server public IP |
+| `PRODUCTION_USER` | `haider` | SSH username |
+| `PRODUCTION_PASSWORD` | Your SSH password | SSH password (or use SSH key) |
 
-3. **PRODUCTION_PASSWORD**: SSH password for production server
-   - Value: Your SSH password
+### Production Secrets (3 secrets)
+
+| Secret Name | Example Value | Description |
+|------------|---------------|-------------|
+| `DATABASE_PASSWORD` | `ijKSTr78nr751qI6TjJfYVNeZA/cmcZ7LHlk9I2wliM=` | PostgreSQL password (auto URL-encoded) |
+| `JWT_SECRET` | `Ev8o5bRYicouOZaiTPHIEe64xG...` | Secret for signing JWT tokens |
+| `ENCRYPTION_SECRET` | `wxIJwYzb5ghyBMUEdYzlliflIg...` | Secret for encrypting sensitive data |
+
+### Domain Configuration (2 secrets)
+
+| Secret Name | Value | Description |
+|------------|-------|-------------|
+| `DOMAIN_BASE` | `supamanage.buzz` | Base domain for projects |
+| `DOMAIN_STUDIO_URL` | `https://studio.supamanage.buzz` | Studio frontend URL |
+
+### Service Configuration (4 secrets)
+
+| Secret Name | Value | Description |
+|------------|-------|-------------|
+| `SERVICE_VERSION_URL` | `https://supamanager.io/updates` | Version service URL |
+| `POSTGRES_DISK_SIZE` | `10` | Default disk size for projects (GB) |
+| `POSTGRES_DEFAULT_VERSION` | `15.1` | Default PostgreSQL version |
+| `POSTGRES_DOCKER_IMAGE` | `supabase/postgres` | PostgreSQL Docker image |
+
+### Provisioning Configuration (5 secrets)
+
+| Secret Name | Value | Description |
+|------------|-------|-------------|
+| `PROVISIONING_ENABLED` | `false` | Enable/disable project provisioning |
+| `PROVISIONING_DOCKER_HOST` | `unix:///var/run/docker.sock` | Docker host for provisioning |
+| `PROVISIONING_PROJECTS_DIR` | `/root/projects` | Directory for project data |
+| `PROVISIONING_BASE_POSTGRES_PORT` | `5433` | Starting port for PostgreSQL instances |
+| `PROVISIONING_BASE_KONG_HTTP_PORT` | `54321` | Starting port for Kong API gateway |
+
+### Studio Configuration (8 secrets)
+
+| Secret Name | Value | Description |
+|------------|-------|-------------|
+| `PLATFORM_PG_META_URL` | `https://www.supamanage.buzz/pg` | pg-meta API URL |
+| `NEXT_PUBLIC_SITE_URL` | `https://studio.supamanage.buzz` | Studio site URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://www.supamanage.buzz` | Main API URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `aaa.bbb.ccc` | Anonymous access key |
+| `NEXT_PUBLIC_GOTRUE_URL` | `https://www.supamanage.buzz/auth` | Auth service URL |
+| `NEXT_PUBLIC_API_URL` | `https://www.supamanage.buzz` | API base URL |
+| `NEXT_PUBLIC_API_ADMIN_URL` | `https://www.supamanage.buzz` | Admin API URL |
+| `NEXT_PUBLIC_HCAPTCHA_SITE_KEY` | `10000000-ffff-ffff-ffff-000000000001` | hCaptcha site key |
+
+### Other Configuration (1 secret)
+
+| Secret Name | Value | Description |
+|------------|-------|-------------|
+| `ALLOW_SIGNUP` | `true` | Enable/disable user registration |
+
+## Total: 26 Secrets Required
 
 ### How to Add Secrets
+
+#### Option 1: Using GitHub Environments (Recommended)
+
+1. Go to your GitHub repository
+2. Click **Settings** → **Environments**
+3. Click **New environment** and name it `production`
+4. Add all 26 secrets listed above
+
+#### Option 2: Using Repository Secrets
 
 1. Go to your GitHub repository
 2. Click **Settings** → **Secrets and variables** → **Actions**
 3. Click **New repository secret**
-4. Add each secret with the name and value listed above
+4. Add each secret one by one
+
+### Quick Setup Script
+
+You can use this script to get the current values from your production server:
+
+```bash
+# SSH into production server
+ssh haider@182.191.91.226
+
+# Extract current environment values
+echo "=== Current Production Configuration ==="
+echo ""
+echo "DATABASE_PASSWORD=$(grep DATABASE_PASSWORD /opt/supamanage/.env | cut -d'=' -f2)"
+echo "JWT_SECRET=$(grep JWT_SECRET /opt/supamanage/supa-manager/.env | cut -d'=' -f2)"
+echo "ENCRYPTION_SECRET=$(grep ENCRYPTION_SECRET /opt/supamanage/supa-manager/.env | cut -d'=' -f2)"
+echo ""
+echo "Copy these values to GitHub Secrets"
+```
 
 ## Manual Deployment
 
@@ -55,11 +139,24 @@ You can manually trigger a deployment:
 4. Select the `main` branch
 5. Click **Run workflow** button
 
+## Environment Updates
+
+When you update any environment variable in GitHub Secrets:
+1. The workflow will automatically update the .env files on the server
+2. Services will be restarted with new configuration
+3. No manual SSH access required!
+
+**Example:** To change `ALLOW_SIGNUP` from `true` to `false`:
+1. Update the `ALLOW_SIGNUP` secret in GitHub
+2. Manually trigger the workflow (or push to main)
+3. The API will restart with the new setting
+
 ## Monitoring Deployments
 
 - All deployments are logged in the **Actions** tab
 - You'll receive email notifications on deployment failures (if configured)
 - Each deployment shows:
+  - Environment variables updated
   - Which commit was deployed
   - Which services were rebuilt
   - Health check results
@@ -69,8 +166,9 @@ You can manually trigger a deployment:
 
 ### Current Setup (Password-based)
 - Currently uses password authentication
-- Password stored as encrypted GitHub secret
+- All secrets stored as encrypted GitHub secrets
 - Only accessible to workflow runs
+- Secrets are never logged or exposed
 
 ### Network Configuration
 - **Public IP**: 182.191.91.226 (used by GitHub Actions)
@@ -116,10 +214,14 @@ ssh haider@182.191.91.226
 # List available backups
 ls -la /opt/supamanage-backups/
 
-# Navigate to installation directory
+# Restore from backup
+BACKUP_DATE="20250117-123456"  # Replace with your backup timestamp
 cd /opt/supamanage
+cp /opt/supamanage-backups/$BACKUP_DATE/.env .
+cp /opt/supamanage-backups/$BACKUP_DATE/supa-manager.env supa-manager/.env
+cp /opt/supamanage-backups/$BACKUP_DATE/studio.env studio/.env
 
-# Checkout previous commit
+# Checkout previous commit (optional)
 git log --oneline  # Find the commit you want to rollback to
 git checkout <previous-commit-sha>
 
@@ -151,6 +253,11 @@ docker compose -f docker-compose.prod.yml up -d
 - Check service logs for errors
 - Verify Nginx configuration is correct
 
+### Environment variables not updating
+- Check that all required secrets are set in GitHub
+- Verify the secret names match exactly (case-sensitive)
+- Check deployment logs for errors during .env file creation
+
 ## Future Improvements
 
 - [ ] Add automated testing before deployment
@@ -158,3 +265,5 @@ docker compose -f docker-compose.prod.yml up -d
 - [ ] Implement blue-green deployment
 - [ ] Add database migration automation
 - [ ] Set up staging environment deployment
+- [ ] Add smoke tests after deployment
+- [ ] Implement automatic rollback on health check failure
