@@ -1,8 +1,9 @@
 # SupaManager Project Roadmap
 
-**Last Updated:** November 16, 2025
-**Project Status:** Phase 3 Complete, Production-Ready for Single-Server Deployments
+**Last Updated:** November 16, 2025 (Evening Update)
+**Project Status:** Phase 3 Complete, Phase 3.5 (Studio UI Integration) In Progress
 **Version:** 1.0.0-beta
+**Active PR:** #7 - Database Editor Support
 
 ---
 
@@ -21,15 +22,19 @@ SupaManager is a functional system for managing self-hosted Supabase instances t
 - Real JWT key generation and management
 - Database migrations and schema management
 - Basic health monitoring
-- 38 API endpoints (90% Studio-compatible)
+- **51 API endpoints** (including 13 new pg-meta endpoints)
+- **pg-meta CRUD operations:** Tables (GET, POST, PATCH, DELETE), Columns (POST)
+- **Security hardening:** Removed hardcoded secrets, added .gitignore protections
+- **Comprehensive roadmap:** 8-phase development plan with timelines
 
 **Infrastructure:**
-- 55 Go source files
-- 38 API handlers
+- 60 Go source files (5 new pg-meta handlers)
+- 51 API handlers (13 new endpoints)
 - 2 database migrations
-- Zero test files (critical gap)
-- No CI/CD pipeline
-- No monitoring/alerting
+- Zero test files (critical gap - Phase 4 priority)
+- No CI/CD pipeline (Phase 6)
+- No monitoring/alerting (Phase 6)
+- Go 1.24 with Docker SDK support
 
 ### Vision
 
@@ -44,13 +49,95 @@ Transform SupaManager into a production-grade, enterprise-ready platform for man
 
 ### Timeline Estimate
 
+- **Phase 3.5 (Studio UI Integration):** 1-2 weeks (IN PROGRESS - 40% complete)
 - **Phase 4 (Testing & Quality):** 3-4 weeks
 - **Phase 5 (Security Hardening):** 2-3 weeks
 - **Phase 6 (Production Readiness):** 3-4 weeks
 - **Phase 7 (Feature Completeness):** 4-6 weeks
 - **Phase 8 (Enterprise Features):** 6-8 weeks
 
-**Total estimated time to full production readiness:** 18-25 weeks (4-6 months)
+**Total estimated time to full production readiness:** 19-27 weeks (4.5-6.5 months)
+
+### Recent Progress (November 16, 2025)
+
+**Completed Today:**
+- ✅ Fixed critical Studio UI crashes (`.split()` error, API key display)
+- ✅ Implemented pg-meta table CRUD endpoints (GET, POST, PATCH, DELETE)
+- ✅ Added column creation endpoint (POST /columns)
+- ✅ Security: Removed 15 files with hardcoded secrets
+- ✅ Go 1.24 upgrade and Docker SDK integration
+- ✅ Phase 2 provisioner merge (interface-based design)
+- ✅ PROJECT_ROADMAP.md created (this document)
+
+**In Progress (Phase 3.5):**
+- 🔄 Additional pg-meta endpoints (GET columns, schemas, functions, triggers, policies)
+- 🔄 Database editor full functionality
+- 🔄 Studio UI complete compatibility
+
+**Next Up:**
+- Phase 4: Testing infrastructure and comprehensive test suite
+- P0 security fixes: JWT expiration, rate limiting
+
+---
+
+## Phase 3.5: Studio UI Integration (Current Phase)
+
+**Priority:** P1 (High)
+**Estimated Effort:** 1-2 weeks
+**Dependencies:** Phase 3 completion
+**Status:** In Progress (40% complete)
+**Active PR:** #7
+
+### Overview
+
+Complete Studio UI compatibility by implementing all required pg-meta endpoints for database management. This phase bridges Phase 3 (provisioning) and Phase 4 (testing) by ensuring Studio UI is fully functional before production hardening.
+
+### 3.5.1 Completed pg-meta Endpoints ✅
+
+- ✅ `GET /platform/pg-meta/:ref/tables` - List tables
+- ✅ `POST /platform/pg-meta/:ref/tables` - Create tables
+- ✅ `PATCH /platform/pg-meta/:ref/tables` - Update tables
+- ✅ `DELETE /platform/pg-meta/:ref/tables` - Delete tables
+- ✅ `POST /platform/pg-meta/:ref/columns` - Add columns
+- ✅ `GET /platform/pg-meta/:ref/types` - PostgreSQL types
+- ✅ `GET /platform/pg-meta/:ref/publications` - Publications
+
+### 3.5.2 Remaining pg-meta Endpoints (P1)
+
+**Estimated Effort:** 3-5 days
+
+- [ ] `GET /platform/pg-meta/:ref/columns` - List columns for a table
+- [ ] `PATCH /platform/pg-meta/:ref/columns` - Update column properties
+- [ ] `DELETE /platform/pg-meta/:ref/columns` - Delete columns
+- [ ] `GET /platform/pg-meta/:ref/schemas` - List database schemas
+- [ ] `POST /platform/pg-meta/:ref/schemas` - Create schemas
+- [ ] `GET /platform/pg-meta/:ref/functions` - List functions
+- [ ] `POST /platform/pg-meta/:ref/functions` - Create functions
+- [ ] `GET /platform/pg-meta/:ref/triggers` - List triggers
+- [ ] `POST /platform/pg-meta/:ref/triggers` - Create triggers
+- [ ] `GET /platform/pg-meta/:ref/policies` - List RLS policies
+- [ ] `POST /platform/pg-meta/:ref/policies` - Create RLS policies
+- [ ] `GET /platform/pg-meta/:ref/roles` - List database roles
+- [ ] `GET /platform/pg-meta/:ref/extensions` - List extensions
+- [ ] `POST /platform/pg-meta/:ref/extensions` - Enable extensions
+
+### 3.5.3 Success Criteria
+
+- [ ] All common Studio UI views load without errors
+- [ ] Table editor fully functional (CRUD operations)
+- [ ] SQL editor executes queries (via pg-meta/query)
+- [ ] Schema viewer displays all database objects
+- [ ] RLS policy editor functional
+- [ ] Extension management works
+- [ ] Zero 404 errors in Studio UI console
+- [ ] All endpoints return proper mock responses
+
+### 3.5.4 Notes
+
+- All endpoints are **stub implementations** returning mock data
+- Actual database operations deferred to Phase 7
+- Focus: Studio UI compatibility, not database functionality
+- Quick wins: 2-3 endpoints per day achievable
 
 ---
 
