@@ -11,6 +11,7 @@ jobs:
   deploy:
     name: Deploy to Production Server
     runs-on: ubuntu-latest
+    environment: production  # Use GitHub Environment for better organization
     
     steps:
       - name: Checkout code
@@ -18,12 +19,48 @@ jobs:
       
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          # Production secrets
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ENCRYPTION_SECRET: ${{ secrets.ENCRYPTION_SECRET }}
+          
+          # Domain configuration
+          DOMAIN_BASE: ${{ secrets.DOMAIN_BASE }}
+          DOMAIN_STUDIO_URL: ${{ secrets.DOMAIN_STUDIO_URL }}
+          
+          # Service configuration
+          SERVICE_VERSION_URL: ${{ secrets.SERVICE_VERSION_URL }}
+          POSTGRES_DISK_SIZE: ${{ secrets.POSTGRES_DISK_SIZE }}
+          POSTGRES_DEFAULT_VERSION: ${{ secrets.POSTGRES_DEFAULT_VERSION }}
+          POSTGRES_DOCKER_IMAGE: ${{ secrets.POSTGRES_DOCKER_IMAGE }}
+          
+          # Provisioning configuration
+          PROVISIONING_ENABLED: ${{ secrets.PROVISIONING_ENABLED }}
+          PROVISIONING_DOCKER_HOST: ${{ secrets.PROVISIONING_DOCKER_HOST }}
+          PROVISIONING_PROJECTS_DIR: ${{ secrets.PROVISIONING_PROJECTS_DIR }}
+          PROVISIONING_BASE_POSTGRES_PORT: ${{ secrets.PROVISIONING_BASE_POSTGRES_PORT }}
+          PROVISIONING_BASE_KONG_HTTP_PORT: ${{ secrets.PROVISIONING_BASE_KONG_HTTP_PORT }}
+          
+          # Studio configuration
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_GOTRUE_URL: ${{ secrets.NEXT_PUBLIC_GOTRUE_URL }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_API_ADMIN_URL: ${{ secrets.NEXT_PUBLIC_API_ADMIN_URL }}
+          PLATFORM_PG_META_URL: ${{ secrets.PLATFORM_PG_META_URL }}
+          NEXT_PUBLIC_HCAPTCHA_SITE_KEY: ${{ secrets.NEXT_PUBLIC_HCAPTCHA_SITE_KEY }}
+          
+          # Signup configuration
+          ALLOW_SIGNUP: ${{ secrets.ALLOW_SIGNUP }}
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
           password: ${{ secrets.PRODUCTION_PASSWORD }}
           port: 22
           script_stop: true  # Stop on first error
+          envs: DATABASE_PASSWORD,JWT_SECRET,ENCRYPTION_SECRET,DOMAIN_BASE,DOMAIN_STUDIO_URL,SERVICE_VERSION_URL,POSTGRES_DISK_SIZE,POSTGRES_DEFAULT_VERSION,POSTGRES_DOCKER_IMAGE,PROVISIONING_ENABLED,PROVISIONING_DOCKER_HOST,PROVISIONING_PROJECTS_DIR,PROVISIONING_BASE_POSTGRES_PORT,PROVISIONING_BASE_KONG_HTTP_PORT,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_GOTRUE_URL,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_API_ADMIN_URL,PLATFORM_PG_META_URL,NEXT_PUBLIC_HCAPTCHA_SITE_KEY,ALLOW_SIGNUP
           script: |
             echo "=== Starting Deployment ==="
             echo "Timestamp: $(date)"
@@ -36,6 +73,56 @@ jobs:
             BACKUP_DIR="/opt/supamanage-backups/$(date +%Y%m%d-%H%M%S)"
             mkdir -p "$BACKUP_DIR"
             cp docker-compose.prod.yml "$BACKUP_DIR/" || true
+            cp .env "$BACKUP_DIR/" || true
+            cp supa-manager/.env "$BACKUP_DIR/supa-manager.env" || true
+            cp studio/.env "$BACKUP_DIR/studio.env" || true
+            
+            # Update environment files with secrets from GitHub
+            echo "Updating environment configuration..."
+            
+            # URL-encode the database password for DATABASE_URL
+            DB_PASSWORD_ENCODED=$(echo -n "$DATABASE_PASSWORD" | jq -sRr @uri)
+            
+            # Update root .env file (for docker-compose)
+            cat > .env << EOF
+DATABASE_PASSWORD=$DATABASE_PASSWORD
+EOF
+            
+            # Update supa-manager .env file
+            cat > supa-manager/.env << EOF
+DATABASE_URL=postgres://postgres:${DB_PASSWORD_ENCODED}@database:5432/supabase
+ALLOW_SIGNUP=$ALLOW_SIGNUP
+JWT_SECRET=$JWT_SECRET
+ENCRYPTION_SECRET=$ENCRYPTION_SECRET
+SERVICE_VERSION_URL=$SERVICE_VERSION_URL
+POSTGRES_DISK_SIZE=$POSTGRES_DISK_SIZE
+POSTGRES_DEFAULT_VERSION=$POSTGRES_DEFAULT_VERSION
+POSTGRES_DOCKER_IMAGE=$POSTGRES_DOCKER_IMAGE
+DOMAIN_STUDIO_URL=$DOMAIN_STUDIO_URL
+DOMAIN_BASE=$DOMAIN_BASE
+PROVISIONING_ENABLED=$PROVISIONING_ENABLED
+PROVISIONING_DOCKER_HOST=$PROVISIONING_DOCKER_HOST
+PROVISIONING_PROJECTS_DIR=$PROVISIONING_PROJECTS_DIR
+PROVISIONING_BASE_POSTGRES_PORT=$PROVISIONING_BASE_POSTGRES_PORT
+PROVISIONING_BASE_KONG_HTTP_PORT=$PROVISIONING_BASE_KONG_HTTP_PORT
+EOF
+            
+            # Update studio .env file
+            cat > studio/.env << EOF
+PLATFORM_PG_META_URL=$PLATFORM_PG_META_URL
+NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_GOTRUE_URL=$NEXT_PUBLIC_GOTRUE_URL
+NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+NEXT_PUBLIC_API_ADMIN_URL=$NEXT_PUBLIC_API_ADMIN_URL
+NEXT_PUBLIC_HCAPTCHA_SITE_KEY=$NEXT_PUBLIC_HCAPTCHA_SITE_KEY
+EOF
+            
+            # Set proper permissions
+            chmod 600 .env supa-manager/.env studio/.env
+            
+            echo "Environment files updated successfully"
             
             # Pull latest code
             echo "Pulling latest code from GitHub..."
@@ -45,53 +132,57 @@ jobs:
             NEW_COMMIT=$(git rev-parse HEAD)
             
             if [ "$CURRENT_COMMIT" = "$NEW_COMMIT" ]; then
-              echo "No new changes detected. Skipping deployment."
-              exit 0
-            fi
-            
-            echo "Updating from commit $CURRENT_COMMIT to $NEW_COMMIT"
-            
-            # Check if supa-manager code changed
-            SUPA_MANAGER_CHANGED=$(git diff --name-only $CURRENT_COMMIT $NEW_COMMIT | grep "^supa-manager/" || true)
-            
-            # Check if studio changed
-            STUDIO_CHANGED=$(git diff --name-only $CURRENT_COMMIT $NEW_COMMIT | grep "^studio/" || true)
-            
-            # Rebuild and restart services
-            if [ -n "$SUPA_MANAGER_CHANGED" ]; then
-              echo "Supa-manager code changed, rebuilding API..."
-              docker compose -f docker-compose.prod.yml build supa-manager
-              docker compose -f docker-compose.prod.yml up -d supa-manager
-              echo "API service restarted"
-            else
-              echo "No changes in supa-manager, skipping API rebuild"
-            fi
-            
-            if [ -n "$STUDIO_CHANGED" ]; then
-              echo "Studio code changed, rebuilding Studio..."
-              cd studio
-              ./build.sh v1.24.04 supa-manager/studio:production .env
-              cd ..
-              docker compose -f docker-compose.prod.yml up -d studio
-              echo "Studio service restarted"
-            else
-              echo "No changes in studio, skipping Studio rebuild"
-            fi
-            
-            # If docker-compose.prod.yml changed, restart all services
-            COMPOSE_CHANGED=$(git diff --name-only $CURRENT_COMMIT $NEW_COMMIT | grep "^docker-compose.prod.yml" || true)
-            if [ -n "$COMPOSE_CHANGED" ]; then
-              echo "Docker compose configuration changed, restarting all services..."
+              echo "No new code changes detected."
+              echo "Environment files have been updated - restarting services..."
               docker compose -f docker-compose.prod.yml up -d
+              sleep 10
+            else
+              echo "Updating from commit $CURRENT_COMMIT to $NEW_COMMIT"
+              
+              # Check if supa-manager code changed
+              SUPA_MANAGER_CHANGED=$(git diff --name-only $CURRENT_COMMIT $NEW_COMMIT | grep "^supa-manager/" || true)
+              
+              # Check if studio changed
+              STUDIO_CHANGED=$(git diff --name-only $CURRENT_COMMIT $NEW_COMMIT | grep "^studio/" || true)
+              
+              # Rebuild and restart services
+              if [ -n "$SUPA_MANAGER_CHANGED" ]; then
+                echo "Supa-manager code changed, rebuilding API..."
+                docker compose -f docker-compose.prod.yml build supa-manager
+                docker compose -f docker-compose.prod.yml up -d supa-manager
+                echo "API service restarted"
+              else
+                echo "No changes in supa-manager, skipping API rebuild"
+              fi
+              
+              if [ -n "$STUDIO_CHANGED" ]; then
+                echo "Studio code changed, rebuilding Studio..."
+                cd studio
+                ./build.sh v1.24.04 supa-manager/studio:production .env
+                cd ..
+                docker compose -f docker-compose.prod.yml up -d studio
+                echo "Studio service restarted"
+              else
+                echo "No changes in studio, skipping Studio rebuild"
+              fi
+              
+              # If docker-compose.prod.yml changed, restart all services
+              COMPOSE_CHANGED=$(git diff --name-only $CURRENT_COMMIT $NEW_COMMIT | grep "^docker-compose.prod.yml" || true)
+              if [ -n "$COMPOSE_CHANGED" ]; then
+                echo "Docker compose configuration changed, restarting all services..."
+                docker compose -f docker-compose.prod.yml up -d
+              fi
             fi
             
             # Show running containers
-            echo "\n=== Deployment Complete ==="
+            echo ""
+            echo "=== Deployment Complete ==="
             echo "Running containers:"
             docker compose -f docker-compose.prod.yml ps
             
             # Check health
-            echo "\nChecking service health..."
+            echo ""
+            echo "Checking service health..."
             sleep 5
             
             # Check API health
@@ -112,7 +203,8 @@ jobs:
               exit 1
             fi
             
-            echo "\n=== Deployment Successful ==="
+            echo ""
+            echo "=== Deployment Successful ==="
             echo "Deployed commit: $NEW_COMMIT"
             echo "Production URL: https://www.supamanage.buzz"
             echo "Studio URL: https://studio.supamanage.buzz"
