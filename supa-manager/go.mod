@@ -3,6 +3,9 @@ module supamanager.io/supa-manager
 go 1.21.0
 
 require (
+	github.com/compose-spec/compose-go v1.20.2
+	github.com/docker/docker v24.0.7+incompatible
+	github.com/docker/go-connections v0.4.0
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-jwt/jwt/v5 v5.2.1

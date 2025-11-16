@@ -45,6 +45,16 @@ func (a *Api) getProjectApi(c *gin.Context) {
 		return
 	}
 
+	// Get real keys if available
+	anonKey := "a.b.c"
+	serviceKey := "a.b.c"
+	if proj.AnonKey.Valid && proj.AnonKey.String != "" {
+		anonKey = proj.AnonKey.String
+	}
+	if proj.ServiceRoleKey.Valid && proj.ServiceRoleKey.String != "" {
+		serviceKey = proj.ServiceRoleKey.String
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"autoApiService": ProjectAutoApiService{
 			Id:   0,
@@ -84,8 +94,8 @@ func (a *Api) getProjectApi(c *gin.Context) {
 			}{
 				Ref: proj.ProjectRef,
 			},
-			DefaultApiKey: "a.b.c",
-			ServiceApiKey: "a.b.c",
+			DefaultApiKey: anonKey,
+			ServiceApiKey: serviceKey,
 		},
 	})
 }

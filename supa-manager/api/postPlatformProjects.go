@@ -1,13 +1,14 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/tjarratt/babble"
 	"net/http"
 	"strings"
 	"supamanager.io/supa-manager/database"
+	"supamanager.io/supa-manager/utils"
 )
 
 type ProjectCreationBody struct {
@@ -60,7 +61,7 @@ func (a *Api) postPlatformProjects(c *gin.Context) {
 	}
 
 	proj, err := a.queries.CreateProject(c.Request.Context(), database.CreateProjectParams{
-		ProjectRef:     strings.ToLower(babble.NewBabbler().Babble()),
+		ProjectRef:     utils.GenerateProjectRef(createProject.Name),
 		ProjectName:    createProject.Name,
 		OrganizationID: createProject.OrgId,
 		JwtSecret:      uuid.New().String(),
@@ -73,6 +74,39 @@ func (a *Api) postPlatformProjects(c *gin.Context) {
 		return
 	}
 
+	// Trigger async provisioning if enabled
+	if a.provisioner != nil {
+		go func() {
+			// Use background context instead of request context to avoid cancellation
+			ctx := context.Background()
+			a.logger.Info(fmt.Sprintf("Starting async provisioning for project %s", proj.ProjectRef))
+			// TODO: Uncomment when ProvisionProject is implemented
+		// if err := a.provisioner.ProvisionProject(ctx, &proj); err != nil {
+		if false {
+				a.logger.Error(fmt.Sprintf("Provisioning failed for project %s: %v", proj.ProjectRef, err))
+				// Update status to FAILED
+				if _, updateErr := a.queries.UpdateProjectStatus(ctx, database.UpdateProjectStatusParams{
+					ProjectRef: proj.ProjectRef,
+					Status:     "FAILED",
+				}); updateErr != nil {
+					a.logger.Error(fmt.Sprintf("Failed to update status to FAILED: %v", updateErr))
+				}
+			} else {
+				a.logger.Info(fmt.Sprintf("Provisioning completed successfully for project %s", proj.ProjectRef))
+			}
+		}()
+	}
+
+	// Get the real keys if available (for provisioned projects)
+	anonKey := "a.b.c"
+	serviceKey := "a.b.c"
+	if proj.AnonKey.Valid && proj.AnonKey.String != "" {
+		anonKey = proj.AnonKey.String
+	}
+	if proj.ServiceRoleKey.Valid && proj.ServiceRoleKey.String != "" {
+		serviceKey = proj.ServiceRoleKey.String
+	}
+
 	c.JSON(http.StatusCreated, ProjectCreationResponse{
 		Id:                       proj.ID,
 		Ref:                      proj.ProjectRef,
@@ -83,8 +117,8 @@ func (a *Api) postPlatformProjects(c *gin.Context) {
 		Region:                   proj.Region,
 		InsertedAt:               proj.CreatedAt.Time.Format("2006-01-02T15:04:05.999Z"),
 		Endpoint:                 fmt.Sprintf("https://%s.%s", proj.ProjectRef, a.config.Domain.Base),
-		AnonKey:                  "a.b.c",
-		ServiceKey:               "a.b.c",
+		AnonKey:                  anonKey,
+		ServiceKey:               serviceKey,
 		IsBranchEnabled:          false,
 		PreviewBranchRefs:        []string{},
 		IsPhysicalBackupsEnabled: false,

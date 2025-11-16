@@ -20,6 +20,9 @@ func (a *Api) getProjectJwtSecretUpdateStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"jwtSecretUpdateStatus": nil,
+		"jwtSecretUpdateStatus": gin.H{
+			"status":   "completed",
+			"progress": 100,
+		},
 	})
 }

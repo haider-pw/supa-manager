@@ -13,16 +13,18 @@ import (
 	"net/http"
 	"supamanager.io/supa-manager/conf"
 	"supamanager.io/supa-manager/database"
+	"supamanager.io/supa-manager/provisioner"
 	"time"
 )
 
 type Api struct {
-	isHealthy bool
-	logger    *slog.Logger
-	config    *conf.Config
-	queries   *database.Queries
-	pgPool    *pgxpool.Pool
-	argon     argon2.Config
+	isHealthy   bool
+	logger      *slog.Logger
+	config      *conf.Config
+	queries     *database.Queries
+	pgPool      *pgxpool.Pool
+	argon       argon2.Config
+	provisioner *provisioner.Provisioner
 }
 
 func CreateApi(logger *slog.Logger, config *conf.Config) (*Api, error) {
@@ -44,12 +46,30 @@ func CreateApi(logger *slog.Logger, config *conf.Config) (*Api, error) {
 		return nil, err
 	}
 
+	// Initialize provisioner if enabled
+	var prov *provisioner.Provisioner
+	if config.Provisioning.Enabled {
+		provConfig := &provisioner.Config{
+			DockerHost:       config.Provisioning.DockerHost,
+			ProjectsDir:      config.Provisioning.ProjectsDir,
+			BasePostgresPort: config.Provisioning.BasePostgresPort,
+			BaseKongHTTPPort: config.Provisioning.BaseKongHTTPPort,
+			DomainBase:       config.Domain.Base,
+			StudioURL:        config.Domain.StudioUrl,
+		}
+		prov = provisioner.NewProvisioner(provConfig, queries)
+		logger.Info("Provisioner initialized and enabled")
+	} else {
+		logger.Info("Provisioner is disabled")
+	}
+
 	return &Api{
-		logger:  logger,
-		config:  config,
-		queries: queries,
-		pgPool:  conn,
-		argon:   argon2.DefaultConfig(),
+		logger:      logger,
+		config:      config,
+		queries:     queries,
+		pgPool:      conn,
+		argon:       argon2.DefaultConfig(),
+		provisioner: prov,
 	}, nil
 }
 
@@ -116,7 +136,7 @@ func (a *Api) Router() *gin.Engine {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
 		AllowHeaders:     []string{"*"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -152,6 +172,20 @@ func (a *Api) Router() *gin.Engine {
 			specificProject.GET("/status", a.getProjectStatus)
 			specificProject.GET("/jwt-secret-update-status", a.getProjectJwtSecretUpdateStatus)
 			specificProject.GET("/api", a.getProjectApi)
+			specificProject.GET("/upgrade/status", a.getProjectUpgradeStatus)
+			specificProject.GET("/health", a.getProjectHealth)
+			specificProject.GET("/supervisor", a.getProjectSupervisor)
+			// TODO: Uncomment when implementing provisioning
+			// specificProject.POST("/pause", a.postProjectPause)
+			// specificProject.POST("/resume", a.postProjectResume)
+			// specificProject.DELETE(INDEX, a.deleteProject)
+
+			// Analytics routes
+			analytics := specificProject.Group("/analytics/endpoints")
+			{
+				analytics.GET("/usage.api-counts", a.getProjectAnalyticsEndpointUsage)
+				analytics.GET("/usage.api-requests-count", a.getProjectAnalyticsEndpointUsage)
+			}
 		}
 	}
 
@@ -163,6 +197,8 @@ func (a *Api) Router() *gin.Engine {
 			specificProject.GET("/status", a.getProjectStatus)
 			specificProject.GET("/jwt-secret-update-status", a.getProjectJwtSecretUpdateStatus)
 			specificProject.GET("/api", a.getProjectApi)
+			specificProject.GET("/health", a.getProjectHealth)
+			specificProject.GET("/supervisor", a.getProjectSupervisor)
 		}
 	}
 
@@ -197,6 +233,8 @@ func (a *Api) Router() *gin.Engine {
 			specificProject := platformPgMeta.Group("/:ref")
 			{
 				specificProject.POST("/query", a.postPlatformPgMetaQuery)
+				specificProject.GET("/types", a.getPlatformPgMetaTypes)
+				specificProject.GET("/publications", a.getPlatformPgMetaPublications)
 			}
 		}
 
@@ -209,6 +247,13 @@ func (a *Api) Router() *gin.Engine {
 				specificProject.GET(INDEX, a.getPlatformProject)
 				specificProject.GET("/settings", a.getPlatformProjectSettings)
 				specificProject.GET("/billing/addons", a.getPlatformProjectBillingAddons)
+
+				// Analytics routes
+				analytics := specificProject.Group("/analytics/endpoints")
+				{
+					analytics.GET("/usage.api-counts", a.getPlatformProjectAnalyticsEndpointUsage)
+					analytics.GET("/usage.api-requests-count", a.getPlatformProjectAnalyticsEndpointUsage)
+				}
 			}
 		}
 

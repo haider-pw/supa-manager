@@ -19,7 +19,7 @@ func (a *Api) getPlatformIntegrationAuthorization(c *gin.Context) {
 	// TODO: Implement GitHub OAuth integration in future phases
 	c.JSON(http.StatusOK, gin.H{
 		"authorized":    false,
-		"authorization": nil,
+		"authorization": gin.H{},
 		"metadata":      gin.H{},
 	})
 }
