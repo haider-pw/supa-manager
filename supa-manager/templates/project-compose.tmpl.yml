@@ -1,0 +1,234 @@
+version: "3.8"
+
+# Supabase Project Template
+# This template is used to provision new Supabase instances
+# Variables are replaced by the provisioner:
+#   {{.ProjectID}}       - Unique project identifier
+#   {{.ProjectName}}     - Human-readable project name
+#   {{.DBPassword}}      - PostgreSQL password
+#   {{.JWTSecret}}       - JWT signing secret
+#   {{.AnonKey}}         - Anonymous API key
+#   {{.ServiceKey}}      - Service role API key
+#   {{.DashboardUser}}   - Dashboard username
+#   {{.DashboardPass}}   - Dashboard password
+#   {{.APIPort}}         - Kong API port
+#   {{.DBPort}}          - PostgreSQL port
+#   {{.StudioPort}}      - Studio UI port
+
+networks:
+  supabase-{{.ProjectID}}:
+    driver: bridge
+
+volumes:
+  db-data-{{.ProjectID}}:
+  storage-data-{{.ProjectID}}:
+
+services:
+  # PostgreSQL Database
+  db:
+    image: supabase/postgres:15.1.0.147
+    container_name: {{.ProjectID}}-db
+    restart: unless-stopped
+    networks:
+      - supabase-{{.ProjectID}}
+    ports:
+      - "{{.DBPort}}:5432"
+    volumes:
+      - db-data-{{.ProjectID}}:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: {{.DBPassword}}
+      POSTGRES_DB: postgres
+      POSTGRES_HOST: /var/run/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kong API Gateway
+  kong:
+    image: kong:2.8.1
+    container_name: {{.ProjectID}}-kong
+    restart: unless-stopped
+    networks:
+      - supabase-{{.ProjectID}}
+    ports:
+      - "{{.APIPort}}:8000"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+      SUPABASE_ANON_KEY: {{.AnonKey}}
+      SUPABASE_SERVICE_KEY: {{.ServiceKey}}
+    volumes:
+      - ./kong.yml:/var/lib/kong/kong.yml:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # GoTrue Auth Service
+  auth:
+    image: supabase/gotrue:v2.99.0
+    container_name: {{.ProjectID}}-auth
+    restart: unless-stopped
+    networks:
+      - supabase-{{.ProjectID}}
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:{{.APIPort}}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:{{.DBPassword}}@db:5432/postgres
+      GOTRUE_SITE_URL: http://localhost:{{.StudioPort}}
+      GOTRUE_URI_ALLOW_LIST: "*"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_SECRET: {{.JWTSecret}}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # PostgREST REST API
+  rest:
+    image: postgrest/postgrest:v11.2.2
+    container_name: {{.ProjectID}}-rest
+    restart: unless-stopped
+    networks:
+      - supabase-{{.ProjectID}}
+    environment:
+      PGRST_DB_URI: postgres://authenticator:{{.DBPassword}}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: {{.JWTSecret}}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Realtime WebSocket Service
+  realtime:
+    image: supabase/realtime:v2.25.50
+    container_name: {{.ProjectID}}-realtime
+    restart: unless-stopped
+    networks:
+      - supabase-{{.ProjectID}}
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: supabase_admin
+      DB_PASSWORD: {{.DBPassword}}
+      DB_NAME: postgres
+      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+      DB_ENC_KEY: supabaserealtime
+      API_JWT_SECRET: {{.JWTSecret}}
+      FLY_ALLOC_ID: fly123
+      FLY_APP_NAME: realtime
+      SECRET_KEY_BASE: UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfYTuRgBiYa15BLrx8etQoXz3gZv1/u2oq
+      ERL_AFLAGS: -proto_dist inet_tcp
+      ENABLE_TAILSCALE: "false"
+      DNS_NODES: "''"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Storage Service
+  storage:
+    image: supabase/storage-api:v0.43.11
+    container_name: {{.ProjectID}}-storage
+    restart: unless-stopped
+    networks:
+      - supabase-{{.ProjectID}}
+    volumes:
+      - storage-data-{{.ProjectID}}:/var/lib/storage
+    environment:
+      ANON_KEY: {{.AnonKey}}
+      SERVICE_KEY: {{.ServiceKey}}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: {{.JWTSecret}}
+      DATABASE_URL: postgres://supabase_storage_admin:{{.DBPassword}}@db:5432/postgres
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+
+  # imgproxy Image Transformation
+  imgproxy:
+    image: darthsim/imgproxy:v3.8.0
+    container_name: {{.ProjectID}}-imgproxy
+    restart: unless-stopped
+    networks:
+      - supabase-{{.ProjectID}}
+    environment:
+      IMGPROXY_BIND: ":5001"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_USE_ETAG: "true"
+      IMGPROXY_ENABLE_WEBP_DETECTION: "true"
+
+  # Database Meta Service
+  meta:
+    image: supabase/postgres-meta:v0.68.0
+    container_name: {{.ProjectID}}-meta
+    restart: unless-stopped
+    networks:
+      - supabase-{{.ProjectID}}
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: {{.DBPassword}}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Analytics (Optional)
+  analytics:
+    image: supabase/logflare:1.4.0
+    container_name: {{.ProjectID}}-analytics
+    restart: unless-stopped
+    networks:
+      - supabase-{{.ProjectID}}
+    environment:
+      LOGFLARE_NODE_HOST: 127.0.0.1
+      DB_USERNAME: supabase_admin
+      DB_DATABASE: postgres
+      DB_HOSTNAME: db
+      DB_PORT: 5432
+      DB_PASSWORD: {{.DBPassword}}
+      DB_SCHEMA: _analytics
+      LOGFLARE_API_KEY: your-super-secret-and-long-logflare-key
+      LOGFLARE_SINGLE_TENANT: "true"
+      LOGFLARE_SUPABASE_MODE: "true"
+      LOGFLARE_MIN_CLUSTER_SIZE: 1
+      RELEASE_COOKIE: cookie
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Vector Service (pgvector)
+  vector:
+    image: timberio/vector:0.28.1-alpine
+    container_name: {{.ProjectID}}-vector
+    restart: unless-stopped
+    networks:
+      - supabase-{{.ProjectID}}
+    volumes:
+      - ./vector.yml:/etc/vector/vector.yml:ro
+    depends_on:
+      analytics:
+        condition: service_started
